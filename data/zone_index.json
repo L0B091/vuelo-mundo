@@ -1,0 +1,135 @@
+{
+ "version": 1,
+ "crs": "EPSG:3857 metros; origen = esquina NO; tama\u00f1o = (este, sur)",
+ "zones": [
+  {
+   "id": "MV",
+   "name": "Maldivas",
+   "kind": "country",
+   "origin": [
+    8070663.082512335,
+    803618.1642596693
+   ],
+   "size": [
+    166979.23618990928,
+    892676.6506763792
+   ],
+   "neighbors": [
+    "IN",
+    "LK"
+   ],
+   "available": true,
+   "bbox_lonlat": [
+    72.5,
+    -0.8,
+    74.0,
+    7.2
+   ],
+   "landing": [
+    8185210.838538612,
+    467045.87058782554,
+    2.0
+   ]
+  },
+  {
+   "id": "IN",
+   "name": "India (pendiente)",
+   "kind": "country",
+   "origin": [
+    7569725.373942603,
+    4232038.46239887
+   ],
+   "size": [
+    3283924.9784015706,
+    3506904.677268839
+   ],
+   "neighbors": [
+    "MV",
+    "LK"
+   ],
+   "available": false,
+   "bbox_lonlat": [
+    68.0,
+    6.5,
+    97.5,
+    35.5
+   ]
+  },
+  {
+   "id": "LK",
+   "name": "Sri Lanka (pendiente)",
+   "kind": "country",
+   "origin": [
+    8849899.51806525,
+    1107588.030772904
+   ],
+   "size": [
+    278298.726983184,
+    460829.4474889047
+   ],
+   "neighbors": [
+    "MV",
+    "IN"
+   ],
+   "available": false,
+   "bbox_lonlat": [
+    79.5,
+    5.8,
+    82.0,
+    9.9
+   ]
+  },
+  {
+   "id": "mv_test_male_oeste",
+   "name": "Banco de pruebas Mal\u00e9 (oeste)",
+   "kind": "site",
+   "parent": "MV",
+   "origin": [
+    8182427.851268781,
+    465617.17091389117
+   ],
+   "size": [
+    400.62773000401864,
+    300.47079750301396
+   ],
+   "neighbors": [
+    "mv_test_male_este"
+   ],
+   "landing": [
+    8182798.4319190355,
+    465477.95277771476,
+    2.1533740487716
+   ],
+   "scene": "res://scenes/zones/mv_test_male_oeste.tscn",
+   "available": true,
+   "local_scale": 1.0015693250100466,
+   "test_bench": true
+  },
+  {
+   "id": "mv_test_male_este",
+   "name": "Banco de pruebas Mal\u00e9 (este)",
+   "kind": "site",
+   "parent": "MV",
+   "origin": [
+    8182828.478998785,
+    465617.17091389117
+   ],
+   "size": [
+    400.62773000401864,
+    300.47079750301396
+   ],
+   "neighbors": [
+    "mv_test_male_oeste"
+   ],
+   "landing": [
+    8182858.526078535,
+    465477.95277771476,
+    2.1533740487716
+   ],
+   "scene": "res://scenes/zones/mv_test_male_este.tscn",
+   "available": true,
+   "local_scale": 1.0015693250100466,
+   "test_bench": true
+  }
+ ]
+}

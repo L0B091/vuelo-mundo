@@ -1,0 +1,8 @@
+# En Debian/Ubuntu conviene instalar GDAL desde el sistema:
+#   sudo apt install gdal-bin python3-gdal python3-numpy python3-scipy python3-shapely python3-pyproj python3-pil
+GDAL>=3.6
+numpy>=1.24
+scipy>=1.10
+shapely>=2.0
+pyproj>=3.5
+Pillow>=9

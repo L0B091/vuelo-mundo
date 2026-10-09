@@ -1,0 +1,58 @@
+{
+ "format": "VMT1",
+ "projection": "EPSG:3857 (Mercator esf\u00e9rico), metros; origen de tesela = esquina NO",
+ "radius_m": 6378137.0,
+ "coarse_level": 6,
+ "detail_level": 8,
+ "levels": {
+  "L6": {
+   "tiles": 4096,
+   "bytes": 23155245,
+   "samples": 65,
+   "i0": 0,
+   "j0": 0,
+   "ni": 64,
+   "nj": 64
+  },
+  "L8": {
+   "tiles": 96,
+   "bytes": 7761882,
+   "samples": 257,
+   "i0": 176,
+   "j0": 120,
+   "ni": 8,
+   "nj": 12
+  },
+  "detail_parents": [
+   [
+    44,
+    30
+   ],
+   [
+    45,
+    30
+   ],
+   [
+    44,
+    31
+   ],
+   [
+    45,
+    31
+   ],
+   [
+    44,
+    32
+   ],
+   [
+    45,
+    32
+   ]
+  ]
+ },
+ "sources": [
+  "ETOPO 2022 v1 60s/15s surface (NOAA NCEI)",
+  "Natural Earth 10m land + minor islands",
+  "OpenStreetMap natural=coastline / natural=reef (Maldivas)"
+ ]
+}
