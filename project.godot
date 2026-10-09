@@ -1,0 +1,53 @@
+; Vuelo Mundo — proyecto Godot 4 (renderer Mobile)
+
+config_version=5
+
+[application]
+
+config/name="Vuelo Mundo"
+config/description="Vuelo continuo en primera persona sobre geografía real."
+run/main_scene="res://scenes/boot.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Quality="*res://scripts/quality/quality_manager.gd"
+InputSetup="*res://scripts/core/input_setup.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[layer_names]
+
+3d_physics/layer_1="terreno"
+3d_physics/layer_2="caminable"
+3d_physics/layer_3="avatar"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+common/physics_ticks_per_second=60
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_3d=1
+
+[shader_globals]
+
+world_origin_mod={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
