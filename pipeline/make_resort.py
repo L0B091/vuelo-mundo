@@ -160,6 +160,16 @@ def main():
             jetty_polys.append(g.buffer(JETTY_W / 2, cap_style=2, join_style=2))
         else:
             jetty_polys.append(g)
+    # OSM a veces dibuja villas encima de la pasarela: la pasarela manda (se recorta la villa)
+    jet0 = unary_union(jetty_polys).buffer(0.4) if jetty_polys else Polygon()
+    trimmed = []
+    for it, g in villas:
+        g2 = g.difference(jet0)
+        if g2.geom_type == "MultiPolygon":
+            g2 = max(g2.geoms, key=lambda q: q.area)
+        if g2.geom_type == "Polygon" and g2.area > 12:
+            trimmed.append((it, g2))
+    villas = trimmed
     terr = []
     ladders = []
     for it, g in villas:
@@ -268,28 +278,28 @@ def main():
 
     # recorrido de prueba: aterrizar en la terraza de la villa más lejana de un muelle largo y
     # caminar por el muelle hacia la isla
-    best = None
     parts = []
     for ln in jetty_lines:
         seg = ln.difference(land)
         parts += [g for g in (seg.geoms if hasattr(seg, "geoms") else [seg]) if g.geom_type == "LineString"]
-    for seg in parts:
-        if seg.length < 120:
-            continue
-        for v in villas:
-            if v[1].distance(seg) < 8.0 and (best is None or v[1].distance(land) > best[2][1].distance(land)):
-                best = (seg, None, v)
+    safe = walk_deck.buffer(-0.45)
+    cands = sorted(((v, seg) for seg in parts if seg.length >= 120 for v in villas if v[1].distance(seg) < 8.0),
+                   key=lambda c: -c[0][1].distance(land))
     walk = None
     landing = None
-    if best:
-        seg, tip, v = best
-        tp = v[1].buffer(TERRACE - 0.8).difference(v[1].buffer(0.8))
-        lp, _ = nearest_points(tp.intersection(over.buffer(-0.5)), seg)
-        landing = [z.e0 + lp.x * z.k, z.n0 - lp.y * z.k]
+    for v, seg in cands:
+        a, b = nearest_points(v[1], seg)
+        dd = a.distance(b) or 1.0
+        off = min(1.6, dd * 0.5)
+        lp = Point(a.x + (b.x - a.x) / dd * off, a.y + (b.y - a.y) / dd * off)  # terraza, frente a la puerta
         s0 = seg.project(lp)
         sgn = 1 if s0 < seg.length - 80 else -1
         pts = [lp] + [seg.interpolate(s0 + sgn * d) for d in range(0, 80, 5)]
-        walk = [[z.e0 + p.x * z.k, z.n0 - p.y * z.k] for p in pts]
+        path = LineString([(p.x, p.y) for p in pts])
+        if all(safe.contains(path.interpolate(d)) for d in np.arange(0.0, path.length, 0.5)):
+            landing = [z.e0 + lp.x * z.k, z.n0 - lp.y * z.k]
+            walk = [[z.e0 + p.x * z.k, z.n0 - p.y * z.k] for p in pts]
+            break
     meta = {
         "id": z.id, "name": z.name, "style": "resort", "size": [z.w, z.h], "deck_y": GROUND_Y,
         "pier_y": DECK_Y, "k": z.k, "origin_global": [z.e0, z.n0], "depth_n": N, "landmarks": [],

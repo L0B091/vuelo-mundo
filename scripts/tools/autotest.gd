@@ -45,6 +45,11 @@ func _begin() -> void:
 	var za: ZoneInfo = main.index.get_zone("mv_male_oeste")
 	target = za.landing
 	a.message.connect(func(m: String) -> void: print("[avatar] ", m))
+	if "--autotest-resort" in OS.get_cmdline_user_args():
+		# solo el tramo del resort (depuración): arrancar con --start cerca de Lankanfinolhu
+		target = main.index.get_zone("mv_lankanfinolhu").landing
+		_set_phase("vuelo_resort")
+		return
 	# fase 1: arranca al oeste de la región de detalle, en turbo, rumbo este
 	_set_phase("vuelo_largo")
 	Engine.time_scale = 6.0
@@ -176,6 +181,7 @@ func _physics_process(dt: float) -> void:
 			while _wp < rpts.size() and gp.horizontal_distance_to(GlobalPos.new(rpts[_wp][0], rpts[_wp][1], 0.0)) < 2.0:
 				_wp += 1
 			if a.state != Avatar.State.WALK:
+				print("[autotest] cayó en e=%.2f n=%.2f wp=%d" % [gp.e, gp.n, _wp])
 				_finish("cayó del muelle")
 				return
 			if not is_nan(_last_y):
