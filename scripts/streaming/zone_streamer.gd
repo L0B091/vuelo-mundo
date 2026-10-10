@@ -13,6 +13,8 @@ signal zone_entered(id: String)
 ## Fundido del agua en el borde de un micro-mapa: el agua de las teselas (611 m por muestra)
 ## se desvanece hacia dentro y la de la zona aparece en esa franja, sin escalón de color.
 ## Malé no: sus dos zonas comparten borde y allí dejaría ver el agua tosca entre ambas.
+const DEFERRED_GROUPS := ["Detalle", "Arrecife"]
+const VIS_BUDGET_USEC := 2000
 const WATER_FADE_M := 200.0
 const NO_WATER_FADE := ["mv_male_oeste", "mv_male_este"]
 
@@ -28,6 +30,7 @@ var _first_update: bool = true
 ## Cuerpos de colisión de zonas recién cargadas, pendientes de agregar al árbol (Jolt arma
 ## cada malla de colisión en el hilo principal: se reparten entre cuadros, la más cercana primero).
 var _pending_cols: Array = []  # [id, StaticBody3D, Node3D padre]
+var _pending_vis: Array = []  # [id, nodo visual, padre]
 
 
 func setup(p_world: WorldRoot, p_index: ZoneIndex) -> void:
@@ -44,6 +47,7 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 			_request(index.get_zone(id), gp, heading)
 	_poll()
 	_add_pending_collisions(gp, 2500)
+	_add_pending_visuals()
 	_update_cuts(gp)
 	# cruce: ¿entramos a una zona? ¿estaba lista?
 	var cur := index.zone_at(gp.e, gp.n, "site")
@@ -96,10 +100,35 @@ func _poll() -> void:
 		if rec.state != "loading":
 			continue
 		var z := index.get_zone(id)
-		var st := ResourceLoader.load_threaded_get_status(z.scene)
-		if st == ResourceLoader.THREAD_LOAD_LOADED:
+		# ya pedida la instanciación: el recurso fue retirado y su estado deja de ser válido
+		var st := (
+			ResourceLoader.THREAD_LOAD_LOADED if rec.has("inst_task") else ResourceLoader.load_threaded_get_status(z.scene)
+		)
+		if st == ResourceLoader.THREAD_LOAD_LOADED and not rec.has("inst_task"):
+			# instanciar ~1000 nodos costaba 50-85 ms en el hilo principal: se hace en un hilo
 			var ps: PackedScene = ResourceLoader.load_threaded_get(z.scene)
-			var node: Node3D = ps.instantiate()
+			rec["inst_out"] = []
+			var out: Array = rec.inst_out
+			rec["inst_task"] = WorkerThreadPool.add_task(
+				func() -> void: out.append(ps.instantiate()), true, "zona " + id
+			)
+			continue
+		if rec.has("inst_task"):
+			if not WorkerThreadPool.is_task_completed(rec.inst_task):
+				continue
+			WorkerThreadPool.wait_for_task_completion(rec.inst_task)
+			rec.erase("inst_task")
+			var node: Node3D = rec.inst_out[0]
+			rec.erase("inst_out")
+			# el detalle (mobiliario, corales, cables) entra de a poco en los cuadros siguientes
+			for group_name: String in DEFERRED_GROUPS:
+				var grp := node.get_node_or_null(NodePath(group_name))
+				if grp == null:
+					continue
+				for b: Node in grp.get_children():
+					b.owner = null
+					grp.remove_child(b)
+					_pending_vis.append([id, b, grp])
 			node.name = "Zona_" + id
 			var cols := node.get_node_or_null(^"Colisiones")
 			if cols != null:
@@ -130,6 +159,10 @@ func _unload(id: String) -> void:
 		if _pending_cols[k][0] == id:
 			(_pending_cols[k][1] as Node).free()
 			_pending_cols.remove_at(k)
+	for k in range(_pending_vis.size() - 1, -1, -1):
+		if _pending_vis[k][0] == id:
+			(_pending_vis[k][1] as Node).free()
+			_pending_vis.remove_at(k)
 	live.erase(id)
 	stats.unloaded += 1
 	zone_unloaded.emit(id)
@@ -157,6 +190,14 @@ func _add_pending_collisions(gp: GlobalPos, budget_usec: int) -> void:
 
 
 ## Colisiones pendientes (0 = la zona ya es completamente sólida).
+## Agrega nodos visuales diferidos dentro de un presupuesto de tiempo por cuadro.
+func _add_pending_visuals() -> void:
+	var t0 := Time.get_ticks_usec()
+	while not _pending_vis.is_empty() and Time.get_ticks_usec() - t0 < VIS_BUDGET_USEC:
+		var item: Array = _pending_vis.pop_back()
+		(item[2] as Node).add_child(item[1])
+
+
 func pending_collisions() -> int:
 	return _pending_cols.size()
 
