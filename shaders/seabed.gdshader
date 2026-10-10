@@ -64,7 +64,7 @@ void fragment() {
 	vec3 mid = pow(vec3(0.45, 0.52, 0.50), vec3(2.2));
 	vec3 deep = pow(vec3(0.10, 0.14, 0.20), vec3(2.2));
 	vec3 base = mix(sand, col, edge);
-	base = mix(base, mid, smoothstep(0.5, 20.0, dep) * mix(1.0, 0.6, edge));
+	base = mix(base, mid, smoothstep(0.5, 20.0, dep));
 	ALBEDO = mix(base, deep, smoothstep(40.0, 1500.0, dep));
 	ROUGHNESS = rough;
 	NORMAL_MAP = texture(sand_normal, uv).rgb;

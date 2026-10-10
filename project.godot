@@ -68,3 +68,7 @@ site_cut_b={
 "type": "vec4",
 "value": Vector4(0, 0, 0, 0)
 }
+site_cut_fade={
+"type": "vec2",
+"value": Vector2(0, 0)
+}

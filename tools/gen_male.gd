@@ -904,8 +904,12 @@ func _build(zid: String) -> void:
 	wmat.set_shader_parameter(&"depth_tex", ImageTexture.create_from_image(img))
 	wmat.set_shader_parameter(&"tex_n", float(n))
 	wmat.set_shader_parameter(&"abs_lat", 4.17)
-	wmat.set_shader_parameter(&"foam_depth", 0.8)
+	wmat.set_shader_parameter(&"foam_depth", 1.2)  # igual que el agua de las teselas L8
 	wmat.set_shader_parameter(&"use_cut", false)
+	if str(meta.get("style", "")) == "resort":
+		# se funde con el agua de las teselas en los 200 m del borde (ZoneStreamer.WATER_FADE_M)
+		wmat.set_shader_parameter(&"zone_size", Vector2(meta.size[0], meta.size[1]))
+		wmat.set_shader_parameter(&"zone_fade_m", 200.0)
 	if ResourceLoader.exists(dir + "/geomorph.png"):
 		wmat.set_shader_parameter(&"geo_tex", load(dir + "/geomorph.png"))
 		wmat.set_shader_parameter(&"use_geo", true)

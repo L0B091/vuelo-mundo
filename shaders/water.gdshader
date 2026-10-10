@@ -21,7 +21,23 @@ bool in_cut(vec2 p) {
 			&& p.y < site_cut_b.w;
 	return a || b;
 }
+global uniform vec2 site_cut_fade;
+
+// 0 fuera de los rectángulos; dentro, 1 - (distancia al borde / franja de fundido)
+float cut_fade(vec2 p, vec4 r, float m) {
+	if (r.z <= r.x || p.x <= r.x || p.x >= r.z || p.y <= r.y || p.y >= r.w) {
+		return 0.0;
+	}
+	if (m <= 0.0) {
+		return 1.0;
+	}
+	float e = min(min(p.x - r.x, r.z - p.x), min(p.y - r.y, r.w - p.y));
+	return smoothstep(0.0, m, e);
+}
 uniform bool use_cut = true;
+// agua propia de una zona con fundido: tamaño en m y franja (0 = sin fundido)
+uniform vec2 zone_size = vec2(0.0);
+uniform float zone_fade_m = 0.0;
 // Detalle de oleaje por perfil (0 bajo … 12 ultra): espectro "tipo FFT" de ondas extra con
 // dispersión de aguas profundas (ω = √(g·k)), sesgado al viento. Lo fija Quality.
 global uniform int water_detail;
@@ -68,8 +84,21 @@ vec3 wave(vec2 p, vec2 ab, float amp, float speed, float t) {
 
 void fragment() {
 	float d = texture(depth_tex, uv_d).r;
-	if (d < -0.6 || (use_cut && in_cut(wxz))) {
+	float tile_keep = 1.0;
+	if (use_cut) {
+		float c = max(cut_fade(wxz, site_cut_a, site_cut_fade.x), cut_fade(wxz, site_cut_b, site_cut_fade.y));
+		if (c >= 0.999) {
+			discard;
+		}
+		tile_keep = 1.0 - c;
+	}
+	if (d < -0.6) {
 		discard;
+	}
+	float zone_keep = 1.0;
+	if (zone_fade_m > 0.0) {
+		vec2 em = min(UV, 1.0 - UV) * zone_size;
+		zone_keep = smoothstep(0.0, zone_fade_m, min(em.x, em.y));
 	}
 	float t = TIME * time_scale;
 	vec3 s = vec3(0.0);
@@ -149,7 +178,7 @@ void fragment() {
 		ALBEDO = mix(srgb(vec3(0.03, 0.30, 0.36)), srgb(vec3(0.6, 0.85, 0.9)), 0.16 + 0.4 * foam);
 		NORMAL = -NORMAL;
 	}
-	ALPHA = FRONT_FACING ? clamp(max(alpha, foam * 0.92), 0.0, 1.0) : 0.92;
+	ALPHA = (FRONT_FACING ? clamp(max(alpha, foam * 0.92), 0.0, 1.0) : 0.92) * tile_keep * zone_keep;
 	ROUGHNESS = mix(0.04, 0.6, foam);
 	METALLIC = 0.0;
 	SPECULAR = 0.6;

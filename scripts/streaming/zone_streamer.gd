@@ -10,6 +10,12 @@ signal zone_loaded(id: String)
 signal zone_unloaded(id: String)
 signal zone_entered(id: String)
 
+## Fundido del agua en el borde de un micro-mapa: el agua de las teselas (611 m por muestra)
+## se desvanece hacia dentro y la de la zona aparece en esa franja, sin escalón de color.
+## Malé no: sus dos zonas comparten borde y allí dejaría ver el agua tosca entre ambas.
+const WATER_FADE_M := 200.0
+const NO_WATER_FADE := ["mv_male_oeste", "mv_male_este"]
+
 var world: WorldRoot
 var index: ZoneIndex
 var live: Dictionary = {}  # id -> {state, node, requested_ms, request}
@@ -157,6 +163,7 @@ func pending_collisions() -> int:
 
 func _update_cuts(gp: GlobalPos) -> void:
 	var rects: Array[Vector4] = []
+	var fades: Array[float] = []
 	inside_ready_site = false
 	for id: String in live:
 		if live[id].state != "ready":
@@ -164,10 +171,13 @@ func _update_cuts(gp: GlobalPos) -> void:
 		var z := index.get_zone(id)
 		var o := world.global_to_local(z.origin_e, z.origin_n)
 		rects.append(Vector4(o.x, o.z, o.x + z.size_e, o.z + z.size_n))
+		fades.append(WATER_FADE_M if not id in NO_WATER_FADE else 0.0)
 		if z.contains(gp.e, gp.n):
 			inside_ready_site = true
 	while rects.size() < 2:
 		rects.append(Vector4.ZERO)
+		fades.append(0.0)
+	RenderingServer.global_shader_parameter_set(&"site_cut_fade", Vector2(fades[0], fades[1]))
 	RenderingServer.global_shader_parameter_set(&"site_cut_a", rects[0])
 	RenderingServer.global_shader_parameter_set(&"site_cut_b", rects[1])
 
