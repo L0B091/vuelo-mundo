@@ -1,5 +1,7 @@
 class_name Hud
 extends CanvasLayer
+
+signal perf_toggled(on: bool)
 ## HUD con controles táctiles (vuelo y caminata) y datos de telemetría/streaming.
 
 var avatar: Avatar
@@ -89,6 +91,9 @@ func _ready() -> void:
 			avatar.fp_roll_limit = 12.0 if on else 180.0
 			avatar.fp_trick_scale = 0.5 if on else 1.0
 	)
+	var btn_fps := _button(root, "FPS", Vector2(-330, -560))
+	btn_fps.toggle_mode = true
+	btn_fps.toggled.connect(func(on: bool) -> void: perf_toggled.emit(on))
 	avatar.camera_mode_changed.connect(func(tp: bool) -> void: btn_cam.text = "1ª" if tp else "3ª")
 
 
