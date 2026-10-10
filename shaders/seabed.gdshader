@@ -10,6 +10,10 @@ uniform sampler2D sand_albedo : source_color, filter_linear_mipmap, repeat_enabl
 uniform sampler2D sand_normal : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform vec3 tint : source_color = vec3(0.9, 0.9, 0.85);
 uniform float uv_scale = 0.05;
+// referencia de color Sentinel-2 (64x64 difuminada): solo variación relativa de tono/brillo
+uniform sampler2D s2_tint : source_color, filter_linear, repeat_disable;
+uniform vec3 s2_mean = vec3(0.5);
+uniform float s2_strength = 0.0;
 varying vec3 lp;
 
 float hash(vec2 p) {
@@ -63,6 +67,10 @@ void fragment() {
 	float dep = max(-lp.y, 0.0);
 	vec3 mid = pow(vec3(0.45, 0.52, 0.50), vec3(2.2));
 	vec3 deep = pow(vec3(0.10, 0.14, 0.20), vec3(2.2));
+	if (s2_strength > 0.0) {
+		vec3 rel = texture(s2_tint, p / zone_size).rgb / max(s2_mean, vec3(0.02));
+		col *= mix(vec3(1.0), clamp(rel, vec3(0.6), vec3(1.6)), s2_strength);
+	}
 	vec3 base = mix(sand, col, edge);
 	base = mix(base, mid, smoothstep(0.5, 20.0, dep));
 	ALBEDO = mix(base, deep, smoothstep(40.0, 1500.0, dep));

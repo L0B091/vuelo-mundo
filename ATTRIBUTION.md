@@ -99,3 +99,9 @@ bucket público de AWS Open Data (esa-worldcover). Uso: dónde van palmeras en e
 by the European Union and ESA; all rights reserved (licencia Copernicus DEM, uso libre con
 atribución). Bucket público de AWS Open Data (copernicus-dem-30m). Uso: altura del dosel para
 escalar palmeras. Es un modelo de superficie: en islas de 1-2 m no sirve como terreno.
+
+## Copernicus Sentinel-2 (referencia de color del lecho)
+Contains modified Copernicus Sentinel data 2026 (escena S2B_43NCE_20260125_0_L2A, color
+verdadero TCI), procesada por ESA; COG públicos de AWS Open Data (sentinel-cogs) vía el
+catálogo STAC earth-search (Element 84). Uso: tinte relativo de 64x64 muy difuminado sobre el
+lecho de los micro-mapas (`pipeline/make_s2_tint.py`). No se calca ninguna geometría.

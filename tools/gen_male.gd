@@ -831,6 +831,18 @@ func _seabed(tint: Color, dir: String = "", size: Vector2 = Vector2.ZERO) -> Mat
 		sm.set_shader_parameter(&"sand_albedo", load(TEX % ["coast_sand_01", "coast_sand_01", "diff"]))
 		sm.set_shader_parameter(&"sand_normal", load(TEX % ["coast_sand_01", "coast_sand_01", "nor_gl"]))
 		sm.set_shader_parameter(&"tint", tint)
+		if ResourceLoader.exists(dir + "/s2_tint.png"):
+			var s2: Texture2D = load(dir + "/s2_tint.png")
+			var im := s2.get_image()
+			im.decompress()
+			var acc := Vector3.ZERO
+			for y in im.get_height():
+				for x in im.get_width():
+					var c := im.get_pixel(x, y).srgb_to_linear()
+					acc += Vector3(c.r, c.g, c.b)
+			sm.set_shader_parameter(&"s2_tint", s2)
+			sm.set_shader_parameter(&"s2_mean", acc / float(im.get_width() * im.get_height()))
+			sm.set_shader_parameter(&"s2_strength", 0.45)
 		m = sm
 	var c := ShaderMaterial.new()
 	c.shader = load("res://shaders/caustics.gdshader")
