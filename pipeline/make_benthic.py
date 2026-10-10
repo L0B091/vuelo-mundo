@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from vm_common import RAW, lonlat_to_global
+from vm_common import RAW, global_to_lonlat, lonlat_to_global
 
 REPO = Path(__file__).resolve().parent.parent
 N = 512
@@ -116,3 +116,37 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def main_tiles(n_px=2048):
+    """Geomorfología para el agua de las teselas L8 (~76 m/px): el color de planicies, lagunas
+    someras y crestas sigue fuera de los micro-mapas y su borde deja de notarse."""
+    global N
+    from vm_common import tile_origin, tile_size
+    feats = []
+    for f in sorted(glob.glob(str(RAW) + "/aca/*.json.gz")):
+        feats += json.load(gzip.open(f))["features"]
+    print("polígonos ACA", len(feats))
+    out = REPO / "data/tiles/L8/geo"
+    out.mkdir(exist_ok=True)
+    sz = tile_size(8)
+    N = n_px
+    for p in sorted((REPO / "data/tiles/L8").glob("*.vmt")):
+        i, j = map(int, p.stem.split("_"))
+        e0, n0 = tile_origin(8, i, j)
+        lon0, lat0 = global_to_lonlat(e0, n0)
+        lon1, lat1 = global_to_lonlat(e0 + sz, n0 - sz)
+        sub = []
+        for f in feats:
+            g = f.get("geometry")
+            if not g:
+                continue
+            c = g["coordinates"][0][0] if g["type"] == "MultiPolygon" else g["coordinates"][0]
+            lo, la = c[0][0], c[0][1]
+            if lon0 - 0.05 < lo < lon1 + 0.05 and lat1 - 0.05 < la < lat0 + 0.05:
+                sub.append(f)
+        if not sub:
+            continue
+        img = raster(sub, {"origin": (e0, n0), "size": (sz, sz)}, GEO, GEO_ORDER, 0)
+        img.save(out / f"{i}_{j}.png")
+        print(p.stem, "polígonos", len(sub))

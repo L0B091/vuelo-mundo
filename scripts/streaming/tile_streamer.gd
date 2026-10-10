@@ -307,6 +307,12 @@ func _make_tile_node(res: Dictionary) -> Node3D:
 		mat.set_shader_parameter(&"tex_n", float(res.depth_n))
 		mat.set_shader_parameter(&"abs_lat", res.abs_lat)
 		mat.set_shader_parameter(&"foam_depth", 1.2 if level == detail_level else 2.5)
+		# geomorfología del Allen Coral Atlas por tesela (planicies, lagunas, crestas)
+		var geo_path := "res://data/tiles/L8/geo/%s.png" % str(res.key).substr(2)
+		if level == detail_level and ResourceLoader.exists(geo_path):
+			mat.set_shader_parameter(&"geo_tex", load(geo_path))
+			mat.set_shader_parameter(&"use_geo", true)
+			mat.set_shader_parameter(&"geo_jitter", 0.0)
 		wm.material_override = mat
 		wm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(wm)

@@ -53,6 +53,7 @@ uniform float time_scale = 1.0;
 // somera/bancos de arena → aguamarina brillante.
 uniform sampler2D geo_tex : filter_nearest, repeat_disable;
 uniform bool use_geo = false;
+uniform float geo_jitter = 0.004;  // 0 en teselas (su UV abarca toda la tesela)
 
 const float P = 8192.0;
 const float TAU_ = 6.28318530718;
@@ -152,16 +153,17 @@ void fragment() {
 	float brk = 0.5 + 0.5 * sin(dot(g, vec2(0.11, 0.07)) + t * 1.8 + s.z * 6.0);
 	float foam = shore * mix(0.55, 1.0, brk);
 	if (use_geo) {
-		vec2 jg = (vec2(sin(g.y * 0.21), cos(g.x * 0.19))) * 0.004;
+		vec2 jg = (vec2(sin(g.y * 0.21), cos(g.x * 0.19))) * geo_jitter;
 		int gc = int(texture(geo_tex, UV + jg).r * 255.0 + 0.5);
 		// cerca del borde del micro-mapa los efectos se apagan: empalma con el agua de las teselas
 		vec2 eu = min(UV, 1.0 - UV);
-		float edge = smoothstep(0.0, 0.08, min(eu.x, eu.y));
+		float edge = 1.0;  // las teselas L8 también llevan geomorfología: sin fundido en el borde
 		if (gc == 1) {
 			// rompiente: series de olas (período ~9 s) que llegan del océano y estallan en espuma
 			float set_ = 0.5 + 0.5 * sin(t * 0.7 + dot(g, vec2(0.013, 0.009)));
 			float lines = smoothstep(0.55, 1.0, sin(dot(g, vec2(0.35, 0.22)) - t * 2.2 + s.z * 4.0));
-			foam = max(foam, clamp(0.45 + 0.55 * lines, 0.0, 1.0) * mix(0.55, 1.0, set_) * edge);
+			foam = max(foam, clamp(0.45 + 0.55 * lines, 0.0, 1.0) * mix(0.55, 1.0, set_) * edge
+				* (1.0 - smoothstep(700.0, 2500.0, view_dist)));  // sin punteado a distancia
 		} else if (gc == 2 || gc == 3) {
 			col = mix(col, srgb(vec3(0.42, 0.90, 0.84)), 0.45 * edge);
 		} else if (gc == 6) {
