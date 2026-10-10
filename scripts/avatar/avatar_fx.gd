@@ -11,7 +11,21 @@ const DUST_BY_PROFILE := {"low": 16, "medium": 48, "high": 110, "ultra": 180}
 var avatar: Avatar
 var shake: float = 0.0
 var trails_made: int = 0
+var splashes: int = 0
+## Viento (sonido procedural: ruido filtrado; sube con la velocidad y en rasante).
+var wind_level: float = 0.0
 var booms: int = 0
+var _wind: AudioStreamPlayer
+var _wind_pb: AudioStreamGeneratorPlayback
+var _wind_lp: float = 0.0
+var _rng := RandomNumberGenerator.new()
+## Rasante: rocío/estela sobre el agua, polvo y hojas sobre tierra.
+var _spray: CPUParticles3D
+var _dust: CPUParticles3D
+var _wake: MeshInstance3D
+var _wake_mesh: ImmediateMesh
+var _wake_pts: Array[Vector3] = []
+var _was_skim_water: bool = false
 var _overlay: ColorRect
 var _layer: CanvasLayer
 var _rings: Array = []  # [MeshInstance3D, t, dur]
@@ -280,8 +294,136 @@ func _update_trail(dt: float) -> void:
 	_trail_mesh.surface_end()
 
 
+func _make_emitter(col: Color, size: float, amount: int) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = 0.9
+	p.emitting = false
+	p.local_coords = false
+	p.direction = Vector3(0, 1, 0)
+	p.spread = 35.0
+	p.initial_velocity_min = 3.0
+	p.initial_velocity_max = 9.0
+	p.gravity = Vector3(0, -9.8, 0)
+	p.scale_amount_min = size * 0.5
+	p.scale_amount_max = size
+	var sm := SphereMesh.new()
+	sm.radius = 0.12
+	sm.height = 0.24
+	sm.radial_segments = 6
+	sm.rings = 3
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.material = m
+	p.mesh = sm
+	var g := Gradient.new()
+	g.set_color(0, Color(1, 1, 1, 0.85))
+	g.set_color(1, Color(1, 1, 1, 0.0))
+	p.color_ramp = g
+	add_child(p)
+	return p
+
+
+func _update_skim(_dt: float) -> void:
+	var on := avatar.state == Avatar.State.FLY and avatar.skim > 0.25 and avatar.speed > 30.0
+	var water := avatar.surface == "agua"
+	if _spray == null:
+		var n := {"low": 24, "medium": 48, "high": 96, "ultra": 140}.get(_profile(), 48) as int
+		_spray = _make_emitter(Color(0.92, 0.97, 1.0), 2.2, n)
+		_dust = _make_emitter(Color(0.78, 0.68, 0.52), 2.8, n)
+		_wake_mesh = ImmediateMesh.new()
+		_wake = MeshInstance3D.new()
+		_wake.mesh = _wake_mesh
+		_wake.top_level = true
+		_wake.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var wm := StandardMaterial3D.new()
+		wm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		wm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		wm.vertex_color_use_as_albedo = true
+		wm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_wake.material_override = wm
+		add_child(_wake)
+	var k := avatar.scale_k()
+	var ground_y := avatar.global_position.y - avatar.agl * k
+	var at := Vector3(avatar.global_position.x, ground_y + 0.05 * k, avatar.global_position.z)
+	if not at.is_finite():
+		return
+	var inten := clampf(avatar.skim * smoothstep(30.0, 250.0, avatar.speed), 0.0, 1.0)
+	_spray.emitting = on and water
+	_dust.emitting = on and not water
+	for e: CPUParticles3D in [_spray, _dust]:
+		e.global_position = at
+		e.initial_velocity_max = 4.0 + 14.0 * inten
+		e.speed_scale = 0.8 + inten
+	if on:
+		shake = maxf(shake, 0.18 * inten)
+	# primer contacto rasante con el agua a velocidad: salpicón (anillo + rocío)
+	var skim_water := on and water and avatar.skim > 0.6
+	if skim_water and not _was_skim_water and avatar.speed > 60.0:
+		splashes += 1
+		burst(at, 0.35, false)
+	_was_skim_water = skim_water
+	# estela de espuma sobre el agua
+	if on and water:
+		_wake_pts.append(at)
+	elif not _wake_pts.is_empty():
+		_wake_pts.remove_at(0)
+	if not _wake_pts.is_empty() and at.distance_to(_wake_pts[-1]) > 400.0:
+		_wake_pts.clear()
+	while _wake_pts.size() > 60:
+		_wake_pts.remove_at(0)
+	_wake_mesh.clear_surfaces()
+	if _wake_pts.size() < 2:
+		return
+	_wake_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	var n2 := _wake_pts.size()
+	for i in n2:
+		var a := _wake_pts[i]
+		var b := _wake_pts[mini(i + 1, n2 - 1)] if i < n2 - 1 else a + (a - _wake_pts[i - 1])
+		var dir := b - a
+		dir.y = 0.0
+		var side := Vector3(-dir.z, 0.0, dir.x).normalized() * (0.6 + 2.4 * (1.0 - float(i) / n2)) * k
+		var col := Color(1, 1, 1, 0.5 * float(i) / n2)
+		_wake_mesh.surface_set_color(col)
+		_wake_mesh.surface_add_vertex(a - side)
+		_wake_mesh.surface_set_color(col)
+		_wake_mesh.surface_add_vertex(a + side)
+	_wake_mesh.surface_end()
+
+
+func _update_wind(dt: float) -> void:
+	if _wind == null:
+		var gen := AudioStreamGenerator.new()
+		gen.mix_rate = 22050.0
+		gen.buffer_length = 0.15
+		_wind = AudioStreamPlayer.new()
+		_wind.stream = gen
+		_wind.volume_db = -60.0
+		add_child(_wind)
+		_wind.play()
+		_wind_pb = _wind.get_stream_playback() as AudioStreamGeneratorPlayback
+	var fly := avatar.state == Avatar.State.FLY
+	var want := 0.0
+	if fly:
+		want = smoothstep(10.0, 600.0, avatar.speed) * 0.7 + avatar.skim * smoothstep(30.0, 250.0, avatar.speed) * 0.3
+	wind_level = lerpf(wind_level, want, clampf(dt * 3.0, 0.0, 1.0))
+	_wind.volume_db = linear_to_db(maxf(wind_level, 0.0005)) - 6.0
+	if _wind_pb == null:
+		return
+	# ruido blanco con pasa-bajos cuyo corte sube con la velocidad (silbido más agudo)
+	var cut := lerpf(0.02, 0.25, wind_level)
+	var frames := _wind_pb.get_frames_available()
+	for i in frames:
+		_wind_lp += (_rng.randf_range(-1.0, 1.0) - _wind_lp) * cut
+		_wind_pb.push_frame(Vector2(_wind_lp, _wind_lp) * 2.0)
+
+
 func _process(dt: float) -> void:
 	_update_trail(dt)
+	_update_skim(dt)
+	_update_wind(dt)
 	for i in range(_rings.size() - 1, -1, -1):
 		var r: Array = _rings[i]
 		r[1] += dt
