@@ -25,6 +25,16 @@ TEXTURES = {
     "sparse_grass": "canteros y plazas verdes",
     "patterned_paving": "Plaza de la República",
     "corrugated_iron_02": "techos de chapa",
+    "wood_floor_deck": "muelles de madera y terrazas de villas sobre el agua (resort)",
+    "thatch_roof_angled": "techos de paja de villas y pabellones (resort)",
+    "white_planks_clean": "paredes de madera de villas (resort)",
+}
+# modelos (glTF 1k): mobiliario urbano de Malé
+MODELS = {
+    "metal_trash_can": "cestos de basura en veredas y plazas",
+    "painted_wooden_bench": "bancos en parques y en el malecón",
+    "plastic_monobloc_chair_01": "sillas de plástico frente a cafés",
+    "potted_plant_04": "macetas frente a comercios",
 }
 HDRIS = {"qwantani_noon_puresky": "cielo de mediodía (solo cielo, sin suelo)"}
 MAPS = {"Diffuse": "diff", "nor_gl": "nor_gl", "arm": "arm"}
@@ -71,6 +81,20 @@ def main():
         manifest.append({
             "id": aid, "kind": "hdri", "use": use, "name": info.get("name"),
             "authors": list(info.get("authors", {}).keys()),
+            "source": f"https://polyhaven.com/a/{aid}", "license": "CC0 1.0",
+        })
+    for aid, use in MODELS.items():
+        info = fetch_json(f"{API}/info/{aid}")
+        files = fetch_json(f"{API}/files/{aid}")
+        g = files["gltf"]["1k"]["gltf"]
+        d = out / "models" / aid
+        (d / "textures").mkdir(parents=True, exist_ok=True)
+        download(g["url"], str(d / f"{aid}.gltf"))
+        for rel, inc in g["include"].items():
+            download(inc["url"], str(d / rel))
+        manifest.append({
+            "id": aid, "kind": "model", "use": use, "name": info.get("name"),
+            "authors": list(info.get("authors", {}).keys()), "polycount": info.get("polycount"),
             "source": f"https://polyhaven.com/a/{aid}", "license": "CC0 1.0",
         })
     with open(out / "ASSETS.json", "w") as f:

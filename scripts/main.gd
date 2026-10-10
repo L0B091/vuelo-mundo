@@ -23,6 +23,7 @@ const FOG_COLOR := Color(0.66, 0.78, 0.90)
 var world: WorldRoot
 var tiles: TileStreamer
 var zones: ZoneStreamer
+var crowd: NpcCrowd
 var index: ZoneIndex
 var avatar: Avatar
 var hud: Hud
@@ -101,6 +102,11 @@ func _ready() -> void:
 	zones.name = "ZoneStreamer"
 	add_child(zones)
 	zones.setup(world, index)
+
+	crowd = NpcCrowd.new()
+	crowd.name = "NpcCrowd"
+	add_child(crowd)
+	crowd.setup(avatar, zones, Quality.current)
 
 	hud = Hud.new()
 	hud.avatar = avatar

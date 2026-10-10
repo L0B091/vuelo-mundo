@@ -23,6 +23,7 @@ import numpy as np
 from shapely import affinity
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.ops import linemerge, polygonize, unary_union
+from shapely.prepared import prep
 
 from vm_common import DETAIL_SAMPLES, RAW, REPO, TILES_OUT, lonlat_to_global, read_tile, tile_of, tile_origin, tile_size
 
@@ -194,7 +195,11 @@ def tint(seed):
 
 # ------------------------------------------------------------------ OSM
 def load_osm():
-    js = json.loads((RAW / "osm_male.json").read_text())
+    return load_osm_file("osm_male.json")
+
+
+def load_osm_file(name):
+    js = json.loads((RAW / name).read_text())
     out = {"coast": [], "islands": [], "buildings": [], "roads": [], "parks": [], "piers": [],
            "breakwaters": [], "beaches": [], "squares": [], "pitches": [], "marinas": []}
     for el in js["elements"]:
@@ -563,12 +568,212 @@ def build_zone(z, osm, l8, out_dir):
                   "buildings_procedural": n_proc, "crossings": n_cross, "ad_slots": len(ad_slots),
                   "meshes": stats},
         "palms": palm_points(parks, squares, sidewalks, road_info, z),
+        "props": street_props(z, road_info, blds, parks, squares, land, rect, shop_lines),
+        "paths": npc_paths(road_info, land, rect, blds),
+        "boats": boat_points(land_all, rect),
         "streets": [{"name": nm, "kind": hw, "pts": [list(c) for c in g.coords]}
                     for hw, g, w, nm in road_info if nm and hw in SHOP_ROADS],
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False))
     print(z.id, json.dumps(meta["stats"]))
     return meta
+
+
+def _frac(*a):
+    return (hh(tuple(round(v, 1) for v in a)) % 10000) / 10000.0
+
+
+def _along(g, step, off=0.0):
+    """Puntos cada `step` m a lo largo de una línea: (x, z, dx, dz) con la dirección local."""
+    L = g.length
+    t = off
+    while t < L:
+        p = g.interpolate(t)
+        q = g.interpolate(min(L, t + 0.5))
+        dx, dz = q.x - p.x, q.y - p.y
+        n = math.hypot(dx, dz) or 1.0
+        yield p.x, p.y, dx / n, dz / n
+        t += step
+
+
+def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
+    """Mobiliario urbano y detalle: [x, y, z, rumbo_rad, escala] por tipo (coordenadas locales).
+    Malé: farolas en las calles con autos, motos estacionadas en racimos sobre el cordón (la ciudad
+    tiene más motos que habitantes con licencia), algunos autos y pickups, bancos/cestos en
+    parques y malecón, macetas y sillas frente a comercios, aires acondicionados y balcones en las
+    fachadas que dan a la calle, árboles de vereda, y cables entre postes."""
+    P = {k: [] for k in ("lamp", "scooter", "car", "bench", "bin", "chair", "plant", "ac", "balcony", "tree")}
+    cables = []
+    bld_union = prep(unary_union([b["poly"] for b in blds]) if blds else Polygon())
+    bld_buf = prep(unary_union([b["poly"].buffer(1.5) for b in blds]) if blds else Polygon())
+    land = prep(land)
+    rect = prep(rect)
+    lamps_by_road = []
+    for hw, g, w, nm in road_info:
+        if not rect.intersects(g):
+            continue
+        veh = hw not in ("footway", "path", "pedestrian")
+        side_off = w / 2 + 0.35
+        row = []
+        for x, zz, dx, dz in _along(g, 26.0 if veh else 40.0, 6.0):
+            nx, nz = dz, -dx
+            sd = 1 if _frac(x, zz) > 0.5 else -1
+            px, pz = x + nx * side_off * sd, zz + nz * side_off * sd
+            pt = Point(px, pz)
+            if not rect.contains(pt) or not land.contains(pt) or bld_union.contains(pt):
+                continue
+            yaw = math.atan2(-nx * sd, -nz * sd)
+            P["lamp"].append([px, DECK_Y, pz, yaw, 1.0])
+            row.append((px, pz))
+        if veh and len(row) > 1:
+            lamps_by_road.append(row)
+        if veh:
+            # motos estacionadas en racimos sobre ambos cordones
+            for x, zz, dx, dz in _along(g, 9.0, 3.0):
+                f = _frac(x, zz, 1)
+                if f < 0.35:
+                    continue
+                nx, nz = dz, -dx
+                for sd in (-1, 1):
+                    n_sc = int(2 + _frac(x, zz, sd) * (6 if hw in SHOP_ROADS else 4))
+                    for k in range(n_sc):
+                        t = (k - n_sc / 2) * 0.85
+                        px = x + dx * t + nx * (w / 2 - 0.9) * sd
+                        pz = zz + dz * t + nz * (w / 2 - 0.9) * sd
+                        pt = Point(px, pz)
+                        if rect.contains(pt) and land.contains(pt) and not bld_union.contains(pt):
+                            yaw = math.atan2(nx * sd, nz * sd) + (_frac(px, pz) - 0.5) * 0.35
+                            P["scooter"].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
+            if hw in SHOP_ROADS or hw in ("residential", "unclassified"):
+                for x, zz, dx, dz in _along(g, 38.0, 17.0):
+                    if _frac(x, zz, 2) < 0.55:
+                        continue
+                    nx, nz = dz, -dx
+                    sd = 1 if _frac(x, zz, 3) > 0.5 else -1
+                    px, pz = x + nx * (w / 2 - 1.2) * sd, zz + nz * (w / 2 - 1.2) * sd
+                    if rect.contains(Point(px, pz)) and land.contains(Point(px, pz)):
+                        P["car"].append([px, DECK_Y + 0.02, pz, math.atan2(dx, dz), 1.0 if _frac(px, pz) < 0.7 else 1.25])
+            # árboles de vereda (pocos: Malé es muy densa)
+            for x, zz, dx, dz in _along(g, 31.0, 13.0):
+                if _frac(x, zz, 4) < 0.6:
+                    continue
+                nx, nz = dz, -dx
+                sd = -1 if _frac(x, zz, 5) > 0.5 else 1
+                px, pz = x + nx * (w / 2 + 0.9) * sd, zz + nz * (w / 2 + 0.9) * sd
+                pt = Point(px, pz)
+                if rect.contains(pt) and land.contains(pt) and not bld_buf.contains(pt):
+                    P["tree"].append([px, DECK_Y, pz, _frac(px, pz) * 6.28, 0.8 + _frac(pz, px) * 0.5])
+    # cables: entre farolas consecutivas, y cruzando la calle cada tanto (catenaria en el juego)
+    for row in lamps_by_road:
+        for a, b in zip(row, row[1:]):
+            if math.dist(a, b) < 45.0:
+                cables.append([a[0], DECK_Y + 6.8, a[1], b[0], DECK_Y + 6.8, b[1]])
+    # bancos, cestos: parques y plazas
+    for poly in [g for g in (list(parks.geoms) if hasattr(parks, "geoms") else [parks])
+                 + (list(squares.geoms) if hasattr(squares, "geoms") else [squares]) if not g.is_empty]:
+        if poly.geom_type != "Polygon":
+            continue
+        ring = poly.exterior
+        for x, zz, dx, dz in _along(ring, 14.0, 4.0):
+            nx, nz = -dz, dx
+            px, pz = x + nx * 1.2, zz + nz * 1.2
+            if not poly.contains(Point(px, pz)):
+                px, pz, nx, nz = x - nx * 1.2, zz - nz * 1.2, -nx, -nz
+            if not rect.contains(Point(px, pz)):
+                continue
+            kind = "bin" if _frac(px, pz, 6) < 0.3 else "bench"
+            P[kind].append([px, DECK_Y + 0.03, pz, math.atan2(nx, nz), 1.0])
+    # frentes de edificios: comercios (macetas, sillas), aires acondicionados y balcones
+    for b in blds:
+        g = b["poly"]
+        if b["kind"] != "building" or g.geom_type != "Polygon":
+            continue
+        floors = max(1, int((b["h"] - 1.0) / FLOOR_H))
+        ext = list(g.exterior.coords)
+        for a in range(len(ext) - 1):
+            p0, p1 = ext[a], ext[a + 1]
+            L = math.dist(p0, p1)
+            if L < 4.0:
+                continue
+            mx, mz = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+            ux, uz = (p1[0] - p0[0]) / L, (p1[1] - p0[1]) / L
+            nx, nz = uz, -ux
+            if g.contains(Point(mx + nx * 0.5, mz + nz * 0.5)):
+                nx, nz = -nx, -nz
+            front = Point(mx + nx * 3.0, mz + nz * 3.0)
+            if bld_union.contains(front) or not rect.contains(Point(mx, mz)):
+                continue  # pared medianera o contra otro edificio: sin detalle
+            yaw = math.atan2(nx, nz)
+            street = shop_lines is not None and not shop_lines.is_empty and Point(mx, mz).distance(shop_lines) < 12.0
+            n_cell = int(L // 3.0)
+            for c in range(n_cell):
+                t = (c + 0.5) * 3.0 - n_cell * 1.5 + L / 2
+                cx, cz = p0[0] + ux * t, p0[1] + uz * t
+                for fl in range(1, floors):
+                    f = _frac(cx, cz, fl)
+                    y = DECK_Y + fl * FLOOR_H
+                    if f < 0.16:
+                        P["balcony"].append([cx + nx * 0.05, y, cz + nz * 0.05, yaw, 1.0])
+                    elif f < 0.34:
+                        P["ac"].append([cx + nx * 0.05 + ux * 1.0, y + 0.55, cz + nz * 0.05 + uz * 1.0, yaw, 1.0])
+                if street and c % 3 == 1:
+                    f = _frac(cx, cz, 9)
+                    if f < 0.25:
+                        P["plant"].append([cx + nx * 0.6, DECK_Y + 0.03, cz + nz * 0.6, yaw, 1.0])
+                    elif f < 0.33:
+                        for k in (-0.5, 0.5):
+                            P["chair"].append([cx + nx * 0.9 + ux * k, DECK_Y + 0.03, cz + nz * 0.9 + uz * k,
+                                               yaw + math.pi, 1.0])
+    out = {k: [[round(v, 3) for v in it] for it in lst] for k, lst in P.items()}
+    out["cables"] = [[round(v, 2) for v in c] for c in cables]
+    print(z.id, "detalle urbano:", {k: len(v) for k, v in out.items()})
+    return out
+
+
+def npc_paths(road_info, land, rect, blds):
+    """Recorridos para NPC: veredas (peatones) y carriles (motos), en coordenadas locales."""
+    bld_union = unary_union([b["poly"].buffer(0.3) for b in blds]) if blds else Polygon()
+    walk, ride = [], []
+    for hw, g, w, nm in road_info:
+        if g.length < 40.0 or not g.intersects(rect):
+            continue
+        veh = hw not in ("footway", "path", "pedestrian")
+        for off in ((w / 2 + 0.8, -(w / 2 + 0.8)) if veh else (0.0,)):
+            try:
+                lg = g.parallel_offset(abs(off), "left" if off >= 0 else "right") if off else g
+            except Exception:
+                continue
+            lg = lg.intersection(rect).intersection(land).difference(bld_union)
+            for part in (lg.geoms if hasattr(lg, "geoms") else [lg]):
+                if part.geom_type == "LineString" and part.length > 30.0:
+                    walk.append([[round(c[0], 2), round(c[1], 2)] for c in part.simplify(0.5).coords])
+        if veh and hw != "service":
+            lg = g.intersection(rect).intersection(land)
+            for part in (lg.geoms if hasattr(lg, "geoms") else [lg]):
+                if part.geom_type == "LineString" and part.length > 60.0:
+                    ride.append([[round(c[0], 2), round(c[1], 2)] for c in part.simplify(0.5).coords])
+    return {"walk": walk[:400], "ride": ride[:150]}
+
+
+def boat_points(land_all, rect):
+    """Dhonis y lanchas fondeadas cerca de la costa (puerto y malecón)."""
+    sea = rect.difference(land_all)
+    ring = land_all.buffer(35.0).difference(land_all.buffer(12.0)).intersection(sea)
+    pts = []
+    x0, z0, x1, z1 = rect.bounds
+    zz = z0
+    while zz < z1:
+        x = x0
+        while x < x1:
+            p = Point(x, zz)
+            if ring.contains(p) and _frac(x, zz, 7) < 0.5:
+                d = land_all.exterior.project(p) if land_all.geom_type == "Polygon" else 0.0
+                q = land_all.exterior.interpolate(d) if land_all.geom_type == "Polygon" else p
+                yaw = math.atan2(p.x - q.x, p.y - q.y) + math.pi / 2
+                pts.append([round(x, 1), 0.0, round(zz, 1), round(yaw, 3), 1.0 if _frac(zz, x) < 0.6 else 1.4])
+            x += 45.0
+        zz += 45.0
+    return pts[:60]
 
 
 def palm_points(parks, squares, sidewalks, road_info, z):
