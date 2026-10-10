@@ -1,11 +1,11 @@
 class_name CapeCloth
 extends MeshInstance3D
-## Capa de tela simulada (Verlet, 4 x 11 partículas) en el espacio local del cuerpo.
+## Capa de tela simulada (Verlet, 7 x 11 partículas) en el espacio local del cuerpo.
 ## Fuerzas: gravedad, viento relativo (inverso de la velocidad del avatar, saturado para no
 ## explotar a 1500 m/s) y un aleteo; restricciones de distancia y un plano/cápsula de espalda
-## para que no atraviese el cuerpo. Barata: ~44 puntos, 3 iteraciones, una malla dinámica.
+## para que no atraviese el cuerpo. Barata: ~77 puntos, 3 iteraciones, una malla dinámica.
 
-const COLS := 4
+const COLS := 7
 const ROWS := 11
 const WIDTH := 0.52
 const LENGTH := 1.2
@@ -30,7 +30,9 @@ func setup(p_body: AvatarBody, c: Color) -> void:
 	mesh = _im
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color
-	m.roughness = 0.7
+	m.roughness = 0.62
+	m.vertex_color_use_as_albedo = true
+	m.albedo_color = (color * 1.15).clamp()
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.rim_enabled = true
 	m.rim = 0.3
@@ -42,7 +44,14 @@ func setup(p_body: AvatarBody, c: Color) -> void:
 func _anchor(i: int) -> Vector3:
 	# hombros: a la altura del pecho alto, apenas detrás de la espalda (+Z local = atrás)
 	var base := _shoulder()
-	return base + Vector3((float(i) / (COLS - 1) - 0.5) * WIDTH * 0.75, 0.0, 0.0)
+	# arco que envuelve los hombros: los bordes adelante (−Z), el centro sobre la espalda
+	var u := float(i) / (COLS - 1) * 2.0 - 1.0
+	return base + Vector3(u * WIDTH * 0.42, -absf(u) * 0.03, -u * u * 0.09)
+
+
+## Ancho de reposo por fila: angosta en el cuello, se abre hacia el ruedo (forma de capa).
+func _rest_w(r: int) -> float:
+	return _seg_w * (0.62 + 0.75 * float(r) / (ROWS - 1))
 
 
 func _shoulder() -> Vector3:
@@ -61,7 +70,10 @@ func _reset() -> void:
 	_prev.resize(COLS * ROWS)
 	for r in ROWS:
 		for c in COLS:
-			var q := _anchor(c) + Vector3(0, -r * _seg_h, 0.02 * r)
+			var a := _anchor(c)
+			var q := Vector3(
+				a.x * (1.0 + 0.9 * float(r) / (ROWS - 1)), a.y - r * _seg_h, a.z * (1.0 - float(r) / ROWS) + 0.02 * r
+			)
 			_p[r * COLS + c] = q
 			_prev[r * COLS + c] = q
 
@@ -100,7 +112,7 @@ func _physics_process(dt: float) -> void:
 				for c in COLS:
 					var i := r * COLS + c
 					if c + 1 < COLS:
-						_solve(i, i + 1, _seg_w * 0.85, r == 0)
+						_solve(i, i + 1, _rest_w(r), r == 0)
 					if r + 1 < ROWS:
 						_solve(i, i + COLS, _seg_h, r == 0)
 			_collide()
@@ -134,16 +146,25 @@ func _collide() -> void:
 
 func _rebuild() -> void:
 	_im.clear_surfaces()
+	# normales suaves por vértice (la tela se ve curva, no en facetas) + ruedo más oscuro
+	var nrm := PackedVector3Array()
+	nrm.resize(_p.size())
+	for r in ROWS - 1:
+		for c in COLS - 1:
+			var i := r * COLS + c
+			var n := (_p[i + 1] - _p[i]).cross(_p[i + COLS] - _p[i])
+			for j: int in [i, i + 1, i + COLS, i + COLS + 1]:
+				nrm[j] += n
 	_im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
 	for r in ROWS - 1:
 		for c in COLS - 1:
 			var i := r * COLS + c
-			var a := _p[i]
-			var b := _p[i + 1]
-			var cc := _p[i + COLS]
-			var d := _p[i + COLS + 1]
-			var n := (b - a).cross(cc - a).normalized()
-			for v: Vector3 in [a, b, cc, b, d, cc]:
-				_im.surface_set_normal(n)
-				_im.surface_add_vertex(v)
+			for j: int in [i, i + 1, i + COLS, i + 1, i + COLS + 1, i + COLS]:
+				var row := j / COLS
+				var hem := 0.7 if row >= ROWS - 2 else 1.0
+				var fold := 0.88 + 0.12 * cos(float(j % COLS) * 2.1)
+				_im.surface_set_color(Color(hem * fold, hem * fold, hem * fold))
+				_im.surface_set_normal(nrm[j].normalized())
+				_im.surface_set_uv(Vector2(float(j % COLS) / (COLS - 1), float(row) / (ROWS - 1)))
+				_im.surface_add_vertex(_p[j])
 	_im.surface_end()

@@ -249,7 +249,7 @@ func _update_camera(dt: float) -> void:
 		return
 	var want := 3.2 if state == State.WALK else 4.5 + smoothstep(50.0, BOOST_SPEED, speed) * 2.5
 	_cam_dist = lerpf(_cam_dist, want, clampf(dt * 2.0, 0.0, 1.0))
-	var local := Basis(Vector3.UP, deg_to_rad(cam_orbit_deg)) * (Vector3(0.0, 0.45, _cam_dist) * k)
+	var local := Basis(Vector3.UP, deg_to_rad(cam_orbit_deg)) * (Vector3(0.0, 0.45 + 1.8 * skim, _cam_dist) * k)
 	# no atravesar paredes: acorta el brazo de la cámara
 	var from := head.global_position
 	var to := head.global_transform * local
@@ -262,7 +262,8 @@ func _update_camera(dt: float) -> void:
 	if absf(cam_orbit_deg) > 0.5:
 		camera.look_at(global_position + Vector3(0, 0.9 * k, 0), Vector3.UP)
 	else:
-		camera.rotation = Vector3.ZERO
+		# en rasante la cámara sube y mira un poco hacia abajo: se ve el agua/suelo pasar
+		camera.rotation = Vector3(deg_to_rad(-14.0 * skim), 0.0, 0.0)
 
 
 func _fly(dt: float, k: float) -> void:

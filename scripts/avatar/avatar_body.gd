@@ -148,18 +148,19 @@ func _attach_hair() -> void:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = def.hair_color * 2.2
 	m.albedo_texture = load("res://assets/characters/superhero/T_Hair_1_BaseColor.png")
-	m.uv1_triplanar = true
-	m.uv1_scale = Vector3(6, 6, 6)
+	m.uv1_scale = Vector3(1, 1, 1)
 	m.roughness = 0.55
-	var cap := SphereMesh.new()
-	cap.radius = 0.112
-	cap.height = 0.2
-	var mi := MeshInstance3D.new()
-	mi.mesh = cap
-	mi.material_override = m
-	mi.position = Vector3(0, 0.165, 0.012)
-	mi.scale = Vector3(1.0, 0.85, 1.08)
-	ba.add_child(mi)
+	var shell := _hair_shell(m)
+	if shell == null:
+		var cap := SphereMesh.new()
+		cap.radius = 0.112
+		cap.height = 0.2
+		var mi := MeshInstance3D.new()
+		mi.mesh = cap
+		mi.material_override = m
+		mi.position = Vector3(0, 0.165, 0.012)
+		mi.scale = Vector3(1.0, 0.85, 1.08)
+		ba.add_child(mi)
 	if def.hair_style in ["long", "bun"]:
 		var tail := CapsuleMesh.new()
 		tail.radius = 0.05 if def.hair_style == "long" else 0.065
@@ -170,6 +171,105 @@ func _attach_hair() -> void:
 		t.position = Vector3(0, 0.02, -0.11) if def.hair_style == "long" else Vector3(0, 0.17, -0.1)
 		t.rotation_degrees.x = -12.0
 		ba.add_child(t)
+
+
+## Pelo esculpido sobre el cráneo: copia los triángulos de la cabeza del cuerpo (pesados al
+## hueso de la cabeza), arriba de la frente y atrás, inflados ~1.5 cm por la normal. Comparte
+## esqueleto y piel, así que se deforma con la cabeza sin costo extra de animación.
+func _hair_shell(mat: Material) -> MeshInstance3D:
+	var body_mi: MeshInstance3D = null
+	var best := 0
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.mesh is ArrayMesh and mi.skin != null:
+			var n := (mi.mesh as ArrayMesh).surface_get_array_len(0)
+			if n > best:
+				best = n
+				body_mi = mi
+	if body_mi == null:
+		return null
+	var head_bone := FlightPose.find_any(skeleton, "DEF-head")
+	var bind := -1
+	for i in body_mi.skin.get_bind_count():
+		var bb := body_mi.skin.get_bind_bone(i)
+		if bb == head_bone or (bb < 0 and skeleton.find_bone(body_mi.skin.get_bind_name(i)) == head_bone):
+			bind = i
+	if bind < 0:
+		return null
+	var arr := (body_mi.mesh as ArrayMesh).surface_get_arrays(0)
+	var pos: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var nor: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var bones: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var wts: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var per := bones.size() / pos.size()
+	var head := PackedByteArray()
+	head.resize(pos.size())
+	var ymin := INF
+	var ymax := -INF
+	var zc := 0.0
+	var cnt := 0
+	for v in pos.size():
+		for j in per:
+			if bones[v * per + j] == bind and wts[v * per + j] > 0.6:
+				head[v] = 1
+				ymin = minf(ymin, pos[v].y)
+				ymax = maxf(ymax, pos[v].y)
+				zc += pos[v].z
+				cnt += 1
+	if cnt < 50:
+		return null
+	zc /= cnt
+	var fz := 1.0  # adelante = lado donde la cabeza tiene más volumen bajo la frente (cara)
+	var hgt := ymax - ymin
+	var keep := func(v: int) -> bool:
+		if head[v] == 0:
+			return false
+		var t := (pos[v].y - ymin) / hgt
+		var front := (pos[v].z - zc) * fz
+		return t > 0.74 or (t > 0.42 and front < 0.0) or (t > 0.6 and front < 0.035)
+	var out_v := PackedVector3Array()
+	var out_n := PackedVector3Array()
+	var out_b := PackedInt32Array()
+	var out_w := PackedFloat32Array()
+	var out_uv := PackedVector2Array()
+	var remap := {}
+	var out_i := PackedInt32Array()
+	for t in range(0, idx.size(), 3):
+		if not (keep.call(idx[t]) and keep.call(idx[t + 1]) and keep.call(idx[t + 2])):
+			continue
+		for k in 3:
+			var v := idx[t + k]
+			if not remap.has(v):
+				remap[v] = out_v.size()
+				out_v.append(pos[v] + nor[v] * 0.014)
+				out_n.append(nor[v])
+				out_uv.append(Vector2(pos[v].x, pos[v].z) * 6.0)
+				for j in per:
+					out_b.append(bones[v * per + j])
+					out_w.append(wts[v * per + j])
+			out_i.append(remap[v])
+	if out_i.is_empty():
+		return null
+	var a := []
+	a.resize(Mesh.ARRAY_MAX)
+	a[Mesh.ARRAY_VERTEX] = out_v
+	a[Mesh.ARRAY_NORMAL] = out_n
+	a[Mesh.ARRAY_TEX_UV] = out_uv
+	a[Mesh.ARRAY_BONES] = out_b
+	a[Mesh.ARRAY_WEIGHTS] = out_w
+	a[Mesh.ARRAY_INDEX] = out_i
+	var am := ArrayMesh.new()
+	var flags := Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if per == 8 else 0
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a, [], {}, flags)
+	var hm := MeshInstance3D.new()
+	hm.name = "PeloEsculpido"
+	hm.mesh = am
+	hm.skin = body_mi.skin
+	hm.material_override = mat
+	body_mi.get_parent().add_child(hm)
+	hm.transform = body_mi.transform
+	hm.skeleton = hm.get_path_to(skeleton)
+	return hm
 
 
 func _attach_ring(bone: String, radius: float, h: float, c: Color, off: Vector3) -> void:

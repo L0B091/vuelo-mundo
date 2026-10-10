@@ -74,9 +74,9 @@ def bake(name):
             xx, zz = np.clip(xs[m], 0, N - 1), np.clip(zs[m], 0, N - 1)
             img[zz, xx] = np.maximum(img[zz, xx], v)
     # un poco de dilatación para que no queden costuras en los bordes UV
-    from scipy.ndimage import grey_dilation
+    from scipy.ndimage import gaussian_filter, grey_dilation
     for ch in range(3):
-        img[:, :, ch] = grey_dilation(img[:, :, ch], size=(5, 5))
+        img[:, :, ch] = gaussian_filter(grey_dilation(img[:, :, ch], size=(5, 5)), 2.5)
     Image.fromarray((img * 255).astype(np.uint8)).save(DIR / f"{name}_suitmask.png")
     print(name, "máscara", (img[:, :, 0] > 0.5).mean().round(3))
 

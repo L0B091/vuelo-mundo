@@ -270,6 +270,18 @@ func _save_shot() -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	img.save_png(path)
 	print("captura guardada: ", path)
+	print(
+		"skim=",
+		avatar.skim,
+		" agl=",
+		avatar.agl,
+		" surf=",
+		avatar.surface,
+		" state=",
+		avatar.state,
+		" spd=",
+		avatar.speed
+	)
 	print(telemetry())
 	get_tree().quit()
 

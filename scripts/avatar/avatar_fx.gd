@@ -22,6 +22,7 @@ var _rng := RandomNumberGenerator.new()
 ## Rasante: rocío/estela sobre el agua, polvo y hojas sobre tierra.
 var _spray: CPUParticles3D
 var _dust: CPUParticles3D
+var _leaves: CPUParticles3D
 var _wake: MeshInstance3D
 var _wake_mesh: ImmediateMesh
 var _wake_pts: Array[Vector3] = []
@@ -299,7 +300,9 @@ func _make_emitter(col: Color, size: float, amount: int) -> CPUParticles3D:
 	p.amount = amount
 	p.lifetime = 0.9
 	p.emitting = false
-	p.local_coords = false
+	# coordenadas locales: el rocío/polvo acompaña al héroe y se abre en abanico detrás y a
+	# los lados (si quedara en el mundo, a 50+ m/s todo caería detrás de la cámara)
+	p.local_coords = true
 	p.direction = Vector3(0, 1, 0)
 	p.spread = 35.0
 	p.initial_velocity_min = 3.0
@@ -307,15 +310,25 @@ func _make_emitter(col: Color, size: float, amount: int) -> CPUParticles3D:
 	p.gravity = Vector3(0, -9.8, 0)
 	p.scale_amount_min = size * 0.5
 	p.scale_amount_max = size
-	var sm := SphereMesh.new()
-	sm.radius = 0.12
-	sm.height = 0.24
-	sm.radial_segments = 6
-	sm.rings = 3
+	# gotas/polvo como sprites blandos (degradé radial), no esferas
+	var sm := QuadMesh.new()
+	sm.size = Vector2(0.7, 0.7)
 	var m := StandardMaterial3D.new()
 	m.albedo_color = col
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.render_priority = 10
+	m.vertex_color_use_as_albedo = true
+	var gt := GradientTexture2D.new()
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.0, 0.5)
+	var gg := Gradient.new()
+	gg.set_color(0, Color(1, 1, 1, 1))
+	gg.set_color(1, Color(1, 1, 1, 0))
+	gt.gradient = gg
+	m.albedo_texture = gt
 	sm.material = m
 	p.mesh = sm
 	var g := Gradient.new()
@@ -333,6 +346,18 @@ func _update_skim(_dt: float) -> void:
 		var n := {"low": 24, "medium": 48, "high": 96, "ultra": 140}.get(_profile(), 48) as int
 		_spray = _make_emitter(Color(0.92, 0.97, 1.0), 2.2, n)
 		_dust = _make_emitter(Color(0.78, 0.68, 0.52), 2.8, n)
+		_leaves = _make_emitter(Color(0.32, 0.5, 0.18), 0.9, n / 2)
+		_leaves.gravity = Vector3(0, -2.5, 0)  # hojas: caen lento y giran
+		_leaves.lifetime = 1.6
+		_leaves.angular_velocity_min = -360.0
+		_leaves.angular_velocity_max = 360.0
+		var lm := BoxMesh.new()
+		lm.size = Vector3(0.22, 0.02, 0.12)
+		var leaf_m := StandardMaterial3D.new()
+		leaf_m.albedo_color = Color(0.3, 0.48, 0.16)
+		leaf_m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		lm.material = leaf_m
+		_leaves.mesh = lm
 		_wake_mesh = ImmediateMesh.new()
 		_wake = MeshInstance3D.new()
 		_wake.mesh = _wake_mesh
@@ -343,19 +368,23 @@ func _update_skim(_dt: float) -> void:
 		wm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		wm.vertex_color_use_as_albedo = true
 		wm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		wm.render_priority = 10  # por encima del agua transparente
 		_wake.material_override = wm
 		add_child(_wake)
 	var k := avatar.scale_k()
 	var ground_y := avatar.global_position.y - avatar.agl * k
-	var at := Vector3(avatar.global_position.x, ground_y + 0.05 * k, avatar.global_position.z)
+	var at := Vector3(avatar.global_position.x, maxf(ground_y, 0.0) + 0.25 * k, avatar.global_position.z)
 	if not at.is_finite():
 		return
 	var inten := clampf(avatar.skim * smoothstep(30.0, 250.0, avatar.speed), 0.0, 1.0)
 	_spray.emitting = on and water
 	_dust.emitting = on and not water
-	for e: CPUParticles3D in [_spray, _dust]:
+	_leaves.emitting = on and not water
+	for e: CPUParticles3D in [_spray, _dust, _leaves]:
 		e.global_position = at
-		e.initial_velocity_max = 4.0 + 14.0 * inten
+		e.initial_velocity_max = 6.0 + 18.0 * inten
+		e.global_rotation = Vector3(0.0, avatar.global_rotation.y, 0.0)
+		e.gravity = Vector3(0, -9.8, 6.0 + 20.0 * inten)  # +Z local = hacia atrás
 		e.speed_scale = 0.8 + inten
 	if on:
 		shake = maxf(shake, 0.18 * inten)
@@ -384,8 +413,8 @@ func _update_skim(_dt: float) -> void:
 		var b := _wake_pts[mini(i + 1, n2 - 1)] if i < n2 - 1 else a + (a - _wake_pts[i - 1])
 		var dir := b - a
 		dir.y = 0.0
-		var side := Vector3(-dir.z, 0.0, dir.x).normalized() * (0.6 + 2.4 * (1.0 - float(i) / n2)) * k
-		var col := Color(1, 1, 1, 0.5 * float(i) / n2)
+		var side := Vector3(-dir.z, 0.0, dir.x).normalized() * (1.2 + 3.5 * (1.0 - float(i) / n2)) * k
+		var col := Color(0.97, 0.99, 1.0, 0.85 * float(i) / n2)
 		_wake_mesh.surface_set_color(col)
 		_wake_mesh.surface_add_vertex(a - side)
 		_wake_mesh.surface_set_color(col)

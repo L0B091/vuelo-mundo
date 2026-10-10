@@ -75,6 +75,9 @@ func _ready() -> void:
 ## Selección de personaje (masculino / femenino) con vista previa 3D girando.
 func _build_character_select(box: VBoxContainer) -> void:
 	_cdef = CharacterDef.load_or_default()
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--character="):
+			_cdef = CharacterDef.preset(a.substr(12))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
 	box.add_child(row)
@@ -104,6 +107,14 @@ func _build_character_select(box: VBoxContainer) -> void:
 	_preview.rotation_degrees.y = 180.0
 	_pv_pivot.add_child(_preview)
 	_preview.setup(_cdef)
+	# precompilación: el otro cuerpo (y su traje/capa/pelo con piel) se dibuja unos cuadros
+	# diminuto detrás del avance, así el cambio de personaje o el primer vuelo no tironea.
+	var warm := AvatarBody.new()
+	_pv_pivot.add_child(warm)
+	warm.setup(CharacterDef.preset("female" if _cdef.body == "male" else "male"))
+	warm.scale = Vector3.ONE * 0.02
+	warm.position = Vector3(0.0, 1.0, 0.5)
+	get_tree().create_timer(0.6).timeout.connect(warm.queue_free)
 	var col := VBoxContainer.new()
 	row.add_child(col)
 	var lbl := Label.new()
