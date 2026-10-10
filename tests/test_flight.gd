@@ -144,3 +144,9 @@ func test_auto_pull_up_avoids_wall() -> void:
 		av._physics_process(1.0 / 60.0)
 	assert_gt(av.pull_ups, 0, "avisa y tira hacia arriba")
 	assert_gt(av.position.y, 20.0, "pasa por encima del muro (20 m)")
+
+
+func test_time_of_day_sun_curve() -> void:
+	assert_lt(TimeOfDay.sun_elevation(5.0), 0.0, "de noche bajo el horizonte")
+	assert_gt(TimeOfDay.sun_elevation(12.0), 70.0, "mediodía tropical casi cenital")
+	assert_almost_eq(TimeOfDay.sun_elevation(6.0), 0.0, 0.1)

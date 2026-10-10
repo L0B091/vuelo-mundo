@@ -15,6 +15,7 @@ extends Node3D
 ##   --pitch=grados             inclinación inicial de la mirada (negativo = abajo)
 ##   --profile=low|medium|high|ultra  fuerza un perfil sin guardarlo
 ##   --hide-hud                  oculta el HUD (capturas limpias)
+##   --hour=H --day-minutes=M --weather=clear|cloudy|rain   hora del día y clima
 ##   --autotest                  recorrido automático de prueba (ver scripts/tools/autotest.gd)
 ##   --quit-after=segundos       sale después de N segundos
 
@@ -31,6 +32,7 @@ var avatar: Avatar
 var hud: Hud
 var env: Environment
 var sun: DirectionalLight3D
+var tod: TimeOfDay
 var args: Dictionary = {}
 var frame_ms_max: float = 0.0
 ## Cuadros de más de 50 ms (para investigar tirones).
@@ -123,6 +125,13 @@ func _ready() -> void:
 	)
 
 	Quality.apply_to(get_viewport(), env, sun, avatar.camera)
+	tod = TimeOfDay.new()
+	tod.name = "TimeOfDay"
+	tod.hour = float(args.get("hour", "10.5"))
+	tod.day_minutes = float(args.get("day-minutes", "0"))
+	tod.set_weather(str(args.get("weather", "clear")))
+	add_child(tod)
+	tod.setup(sun, env, env.sky.sky_material as ShaderMaterial, avatar.camera, FOG_COLOR)
 	Quality.profile_changed.connect(func(_n: String) -> void: Quality.apply_to(get_viewport(), env, sun, avatar.camera))
 
 	if args.has("autotest"):
@@ -209,6 +218,8 @@ func _process(dt: float) -> void:
 func _update_fog() -> void:
 	var base: float = float(Quality.current.get("fog_end_m", 90000.0))
 	var end: float = base * clampf(1.0 + avatar.agl / 2500.0, 1.0, 4.0)
+	if tod != null:
+		end *= tod.fog_scale
 	env.fog_depth_end = end
 	env.fog_depth_begin = end * 0.2
 	avatar.camera.far = end * 1.1
