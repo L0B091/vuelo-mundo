@@ -164,6 +164,15 @@ func launch() -> void:
 
 
 ## Lo llama el avatar cada cuadro.
+## Actitud de vuelo: alabeo en curvas y rotaciones de acrobacia (grados), sobre la pose.
+func set_attitude(bank_deg: float, roll_deg: float, pitch_deg: float, yaw_deg: float) -> void:
+	if pivot == null:
+		return
+	pivot.rotation.x = -deg_to_rad(_pitch + pitch_deg)
+	pivot.rotation.y = -deg_to_rad(yaw_deg)
+	pivot.rotation.z = -deg_to_rad(bank_deg + roll_deg)
+
+
 func drive(state: int, speed: float, climb: float, boosted: bool, dt: float) -> void:
 	if model == null:
 		return

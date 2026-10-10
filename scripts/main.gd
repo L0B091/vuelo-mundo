@@ -9,6 +9,8 @@ extends Node3D
 ##   --character=male|female    personaje (si no, el guardado en user://character.tres)
 ##   --third-person             cámara en tercera persona
 ##   --event=takeoff|impact     (con --screenshot) captura el despegue o el impacto del aterrizaje
+##   --event=trick:<nombre>     acrobacia (roll_left, loop, flip, spin, dodge_left...)
+##   --event=boom               cruza la barrera del sonido
 ##   --event-delay=s            segundos después del evento (0.2)
 ##   --pitch=grados             inclinación inicial de la mirada (negativo = abajo)
 ##   --profile=low|medium|high|ultra  fuerza un perfil sin guardarlo
@@ -248,6 +250,15 @@ func _handle_cli(dt: float) -> void:
 		if _idle_frames == 90:
 			if ev == "takeoff":
 				avatar.request_takeoff()
+				_event_t = 0.0
+				return
+			if ev.begins_with("trick:"):
+				avatar.trick(ev.substr(6))
+				_event_t = 0.0
+				return
+			if ev == "boom":
+				avatar.boost = true
+				avatar.speed = Avatar.SOUND_SPEED + 5.0
 				_event_t = 0.0
 				return
 			_save_shot()

@@ -10,12 +10,19 @@ const DUST_BY_PROFILE := {"low": 16, "medium": 48, "high": 110, "ultra": 180}
 
 var avatar: Avatar
 var shake: float = 0.0
+var trails_made: int = 0
+var booms: int = 0
 var _overlay: ColorRect
 var _layer: CanvasLayer
 var _rings: Array = []  # [MeshInstance3D, t, dur]
 var _marks: Array = []  # [MeshInstance3D, t]
 var _dust_mat: StandardMaterial3D
 var _crack_tex: ImageTexture
+## Estela (cinta) detrás del avatar en acrobacias y a gran velocidad.
+var _trail: MeshInstance3D
+var _trail_mesh: ImmediateMesh
+var _trail_pts: Array[Vector3] = []
+var _trail_t: float = 0.0
 
 
 func setup(p_avatar: Avatar) -> void:
@@ -187,7 +194,92 @@ func burst(ground_pos: Vector3, strength: float, crater: bool) -> void:
 	shake = maxf(shake, 0.35 + strength * 0.65)
 
 
+## Estampido sónico: anillo de condensación vertical alrededor del avatar y sacudida.
+func sonic_boom() -> void:
+	booms += 1
+	var k := avatar.scale_k()
+	var ring := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(46.0, 46.0) * k
+	ring.mesh = q
+	var m := ShaderMaterial.new()
+	m.shader = SH_RING
+	m.set_shader_parameter(&"strength", 1.1)
+	ring.material_override = m
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# el anillo viaja con el avatar (a 343 m/s uno fijo en el mundo quedaría atrás al instante)
+	avatar.add_child(ring)
+	ring.position = Vector3(0, 0.9 * k, -0.8 * k)
+	_rings.append([ring, 0.0, 0.9])
+	shake = maxf(shake, 0.9)
+
+
+func trick_started(_name: String) -> void:
+	shake = maxf(shake, 0.25)
+	_trail_t = 1.2
+	trails_made += 1
+
+
+func _ensure_trail() -> void:
+	if _trail != null:
+		return
+	_trail_mesh = ImmediateMesh.new()
+	_trail = MeshInstance3D.new()
+	_trail.mesh = _trail_mesh
+	_trail.top_level = true
+	_trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.vertex_color_use_as_albedo = true
+	_trail.material_override = m
+	add_child(_trail)
+
+
+func _update_trail(dt: float) -> void:
+	_trail_t = maxf(0.0, _trail_t - dt)
+	var on := (
+		avatar.state == Avatar.State.FLY
+		and (_trail_t > 0.0 or avatar.acro.active() or (avatar.boost and avatar.speed > 300.0))
+	)
+	if _profile() == "low":
+		on = on and avatar.acro.active()
+	_ensure_trail()
+	var p := avatar.global_position + Vector3(0, 0.9 * avatar.scale_k(), 0)
+	if not _trail_pts.is_empty() and p.distance_to(_trail_pts[-1]) > 400.0:
+		_trail_pts.clear()  # salto (cambio de origen): no dibujar una cinta enorme
+	if on:
+		_trail_pts.append(p)
+	elif not _trail_pts.is_empty():
+		_trail_pts.remove_at(0)
+	while _trail_pts.size() > 28:
+		_trail_pts.remove_at(0)
+	_trail_mesh.clear_surfaces()
+	if _trail_pts.size() < 2:
+		return
+	var cam := get_viewport().get_camera_3d()
+	var eye := cam.global_position if cam else p + Vector3.UP
+	var w := 0.16 * avatar.scale_k()
+	_trail_mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	var n := _trail_pts.size()
+	for i in n:
+		var a := _trail_pts[i]
+		var b := _trail_pts[mini(i + 1, n - 1)] if i < n - 1 else a + (a - _trail_pts[i - 1])
+		var side := (b - a).cross(eye - a).normalized() * w * (float(i) / n)
+		# cerca de la cámara (tercera persona) la cinta se desvanece: si no, tapa la pantalla
+		var near_fade := smoothstep(5.0, 14.0, a.distance_to(eye) / avatar.scale_k())
+		var col := Color(0.75, 0.88, 1.0, 0.45 * pow(float(i) / n, 1.5) * near_fade)
+		_trail_mesh.surface_set_color(col)
+		_trail_mesh.surface_add_vertex(a - side)
+		_trail_mesh.surface_set_color(col)
+		_trail_mesh.surface_add_vertex(a + side)
+	_trail_mesh.surface_end()
+
+
 func _process(dt: float) -> void:
+	_update_trail(dt)
 	for i in range(_rings.size() - 1, -1, -1):
 		var r: Array = _rings[i]
 		r[1] += dt

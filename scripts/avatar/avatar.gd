@@ -27,6 +27,16 @@ const RUN_SPEED := 4.5
 const YAW_RATE := 55.0
 const LAND_RAY := 400.0
 const MAX_ALT := 20000.0
+const SOUND_SPEED := 343.0
+const TRICK_ACTIONS := {
+	"trick_roll_left": "roll_left",
+	"trick_roll_right": "roll_right",
+	"trick_loop": "loop",
+	"trick_flip": "flip",
+	"trick_spin": "spin",
+	"trick_dodge_left": "dodge_left",
+	"trick_dodge_right": "dodge_right",
+}
 
 var world: WorldRoot
 var state: int = State.FLY
@@ -54,12 +64,24 @@ var touch_climb: float = 0.0  # -1..1
 ## Entrada programática (piloto automático de pruebas); se suma a la del jugador.
 var pilot_stick: Vector2 = Vector2.ZERO
 var pilot_climb: float = 0.0
+## Dinámica de vuelo: inercia de giro, alabeo en las curvas, turbulencia y acrobacias.
+var acro := FlightAcro.new()
+var yaw_vel: float = 0.0  # grados/s (con inercia)
+var bank: float = 0.0  # alabeo del cuerpo en grados (+ = ala derecha abajo)
+## Confort en primera persona: máximo alabeo de la cámara (grados). 0..180; 180 = sin límite.
+var fp_roll_limit: float = 12.0
+## Escala de las rotaciones de acrobacia en primera persona (1 = completas).
+var fp_trick_scale: float = 0.5
+var turbulence: Vector2 = Vector2.ZERO  # sacudida suave de la vista (grados)
+var supersonic_count: int = 0
 var _look_delta: Vector2 = Vector2.ZERO
 var _cam_dist: float = 4.0
 var _landing_rate: float = 0.0
 var _off_walkable_t: float = 0.0
 var _takeoff_t: float = 0.0
 var _land_target_y: float = 0.0
+var _was_supersonic: bool = false
+var _turb_t: float = 0.0
 
 
 func _ready() -> void:
@@ -147,6 +169,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		boost = not boost
 	elif event.is_action_pressed("camera_toggle"):
 		toggle_camera()
+	else:
+		for act: String in TRICK_ACTIONS:
+			if event.is_action_pressed(act):
+				trick(TRICK_ACTIONS[act])
+
+
+## Lanza una acrobacia (teclado, gesto táctil o pruebas). Solo en vuelo.
+func trick(name: String) -> bool:
+	if state != State.FLY:
+		return false
+	var ok := acro.start(name, speed)
+	if ok and fx != null:
+		fx.trick_started(name)
+	return ok
 
 
 func _physics_process(dt: float) -> void:
@@ -166,14 +202,22 @@ func _physics_process(dt: float) -> void:
 	var eye := EYE_HEIGHT if state == State.WALK else FLY_EYE
 	head.position.y = lerpf(head.position.y, eye, clampf(dt * 4.0, 0.0, 1.0))
 	var pitch := look_pitch
+	var roll_cam := 0.0
 	if state == State.FLY:
 		pitch += clampf(climb / maxf(speed, 30.0), -0.5, 0.5) * 20.0
+		if not third_person:
+			pitch += acro.pitch * fp_trick_scale
+			roll_cam = clampf(-bank * 0.4 - acro.roll * fp_trick_scale, -fp_roll_limit, fp_roll_limit)
+		pitch += turbulence.y
 	head.rotation.x = deg_to_rad(pitch)
+	head.rotation.z = lerp_angle(head.rotation.z, deg_to_rad(roll_cam), clampf(dt * 8.0, 0.0, 1.0))
+	head.rotation.y = deg_to_rad(turbulence.x) + (deg_to_rad(-acro.yaw * fp_trick_scale) if not third_person else 0.0)
 
 
 func _process(dt: float) -> void:
 	if body != null:
 		body.drive(state, speed, climb, boost, dt)
+		body.set_attitude(bank, acro.roll, acro.pitch, acro.yaw)
 	_update_camera(dt)
 
 
@@ -212,17 +256,29 @@ func _update_camera(dt: float) -> void:
 func _fly(dt: float, k: float) -> void:
 	var vmax := BOOST_SPEED if boost else MAX_SPEED
 	var thr := Input.get_action_strength("throttle_up") - Input.get_action_strength("throttle_down")
-	var accel := 25.0 + speed * 0.6
+	# curva de aceleración: fuerte al arrancar, se suaviza cerca del máximo; el turbo empuja más
+	var near := clampf(speed / vmax, 0.0, 1.0)
+	var accel := (25.0 + speed * 0.6) * (1.0 - 0.55 * near * near) * (2.2 if boost else 1.0)
 	if touch_throttle >= 0.0:
 		speed = move_toward(speed, touch_throttle * vmax, accel * dt)
+	elif thr < 0.0 and speed < 40.0:
+		# freno de vuelo estacionario: se detiene firme pero sin golpe
+		speed = lerpf(speed, 0.0, clampf(dt * 2.5, 0.0, 1.0))
 	else:
-		speed = clampf(speed + thr * accel * dt, 0.0, vmax)
+		speed = clampf(speed + thr * accel * dt, 0.0, vmax * 1.1)
 	if speed > vmax:
-		speed = move_toward(speed, vmax, accel * 2.0 * dt)
+		speed = move_toward(speed, vmax, accel * 1.5 * dt)
 	var yaw := (
 		Input.get_action_strength("yaw_right") - Input.get_action_strength("yaw_left") + touch_stick.x + pilot_stick.x
 	)
-	heading_deg = fposmod(heading_deg + clampf(yaw, -1.0, 1.0) * YAW_RATE * dt, 360.0)
+	# giro con inercia: la velocidad angular se acerca a la pedida (más lenta a gran velocidad)
+	var yaw_rate := YAW_RATE * (1.15 - 0.55 * smoothstep(150.0, BOOST_SPEED, speed))
+	var resp := 3.5 if absf(yaw) > 0.05 else 5.5  # al soltar se endereza un poco más rápido
+	yaw_vel = lerpf(yaw_vel, clampf(yaw, -1.0, 1.0) * yaw_rate, clampf(dt * resp, 0.0, 1.0))
+	heading_deg = fposmod(heading_deg + yaw_vel * dt, 360.0)
+	# alabeo coordinado: tan(bank) = v·ω/g, limitado; en vuelo lento casi no se inclina
+	var want_bank := rad_to_deg(atan(maxf(speed, 0.0) * deg_to_rad(yaw_vel) / 9.81))
+	bank = lerpf(bank, clampf(want_bank, -70.0, 70.0), clampf(dt * 4.0, 0.0, 1.0))
 	var c := (
 		Input.get_action_strength("climb")
 		- Input.get_action_strength("descend")
@@ -237,8 +293,21 @@ func _fly(dt: float, k: float) -> void:
 		_takeoff_t -= dt
 		target_climb = maxf(target_climb, 22.0)
 	climb = move_toward(climb, target_climb, climb_max * 1.5 * dt)
+	# picada: bajar suma velocidad; trepar fuerte cuesta un poco
+	if climb < -5.0:
+		speed = minf(speed + -climb * 0.22 * dt, vmax * 1.1)
+	elif climb > 20.0 and speed > 60.0:
+		speed -= climb * 0.05 * dt
+	_supersonic_check()
+	_turbulence(dt)
+	acro.step(dt)
 	var h := heading_vec()
 	velocity = Vector3(h.x * speed, climb, -h.y * speed) * k
+	if acro.active():
+		# velocidad extra del truco en ejes locales del avatar (x derecha, z adelante)
+		var fwd := Vector3(h.x, 0.0, -h.y)
+		var right := Vector3(h.y, 0.0, h.x)
+		velocity += (right * acro.vel_local.x + Vector3.UP * acro.vel_local.y + fwd * acro.vel_local.z) * k
 	move_and_slide()
 	# no hundirse en el mar ni salir del techo
 	if position.y < 2.0 * k:
@@ -250,6 +319,26 @@ func _fly(dt: float, k: float) -> void:
 	# aterrizaje automático suave: lento y a punto de tocar una superficie caminable
 	if ground_kind == "caminable" and agl < 1.2 and speed < 20.0 and climb <= 0.0:
 		_enter_walk()
+
+
+func _supersonic_check() -> void:
+	var sup := speed >= SOUND_SPEED
+	if sup and not _was_supersonic:
+		supersonic_count += 1
+		if fx != null:
+			fx.sonic_boom()
+		message.emit("¡Barrera del sonido!")
+	_was_supersonic = speed >= SOUND_SPEED * 0.97 if _was_supersonic else sup
+
+
+## Viento/turbulencia: sacudida suave (ruido de senos) que crece con la velocidad y cerca del
+## suelo; muy chica para no marear.
+func _turbulence(dt: float) -> void:
+	_turb_t += dt
+	var amp := smoothstep(40.0, 900.0, speed) * 0.55 + (0.25 if agl < 60.0 and speed > 80.0 else 0.0)
+	var tt := _turb_t
+	var want := Vector2(sin(tt * 1.7) + sin(tt * 3.1 + 1.0) * 0.5, sin(tt * 2.3 + 0.4) + sin(tt * 4.7) * 0.4) * amp
+	turbulence = turbulence.lerp(want, clampf(dt * 4.0, 0.0, 1.0))
 
 
 func _landing(dt: float, k: float) -> void:
