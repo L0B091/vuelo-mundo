@@ -316,13 +316,29 @@ def main():
     rng = np.random.default_rng(7)
     minx, minz, maxx, maxz = inner.bounds
     tries = 0
-    while len(palms) < 900 and tries < 30000:
+    # dónde hay árboles según ESA WorldCover (clase 10, 10 m); en pasto/arbusto pocas. La altura
+    # de cada palmera sigue el dosel del Copernicus GLO-30 DSM (superficie, no terreno: en estas
+    # islas de 1-2 m el DSM marca la copa de los árboles).
+    import landcover as lc
+    lon0, lat0 = lc.global_to_lonlat(z.e0, z.n0)
+    wc, dm = lc.worldcover(lat0, lon0), lc.dsm(lat0, lon0)
+    wc_counts = {}
+    while len(palms) < 900 and tries < 40000:
         tries += 1
         x, zz = rng.uniform(minx, maxx), rng.uniform(minz, maxz)
         p = Point(x, zz)
         if not inner.buffer(8).contains(p) or blds_all.buffer(2.0).contains(p) or path_poly.buffer(0.8).contains(p):
             continue
-        palms.append([round(x, 2), round(zz, 2), float(rng.uniform(0, 360)), round(float(rng.uniform(0.8, 1.25)), 2)])
+        lon, lat = lc.global_to_lonlat(z.e0 + x * z.k, z.n0 - zz * z.k)
+        cls = int(wc.at(lon, lat) or 0)
+        keep = {lc.TREE: 1.0, lc.SHRUB: 0.5, lc.GRASS: 0.25, lc.MANGROVE: 1.0}.get(cls, 0.08)
+        if rng.uniform() > keep:
+            continue
+        wc_counts[cls] = wc_counts.get(cls, 0) + 1
+        canopy = float(dm.at(lon, lat) or 0.0) - GROUND_Y
+        sc = float(np.clip(canopy / 9.0, 0.75, 1.3)) if canopy > 3.0 else float(rng.uniform(0.75, 1.0))
+        palms.append([round(x, 2), round(zz, 2), float(rng.uniform(0, 360)), round(sc, 2)])
+    print("palmeras por clase WorldCover:", wc_counts)
 
     # agua: laguna turquesa poco profunda alrededor (villas sobre 1.5-3 m), cae a L8 lejos
     l8 = L8()

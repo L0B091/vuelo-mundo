@@ -87,3 +87,15 @@ Ubicaciones reales (referencias públicas de buceo/conservación): Lankan Manta 
 Modelos procedurales (`scripts/world/reef_meshes.gd`), colocados sobre la clase "Coral/Algae"
 (y parte de "Rock") del mapa bentónico del Allen Coral Atlas (CC BY 4.0, ver arriba).
 La ubicación de cada cabezo dentro de esas clases es aleatoria, no un relevamiento.
+
+## ESA WorldCover 2021 v200 (10 m)
+© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel data (2021) processed by
+ESA WorldCover consortium. Licencia CC BY 4.0. https://esa-worldcover.org — descargado del
+bucket público de AWS Open Data (esa-worldcover). Uso: dónde van palmeras en el resort
+(clase "Tree cover"); no se calca geometría.
+
+## Copernicus GLO-30 DSM
+© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS
+by the European Union and ESA; all rights reserved (licencia Copernicus DEM, uso libre con
+atribución). Bucket público de AWS Open Data (copernicus-dem-30m). Uso: altura del dosel para
+escalar palmeras. Es un modelo de superficie: en islas de 1-2 m no sirve como terreno.
