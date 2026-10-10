@@ -46,7 +46,8 @@ func setup(p_avatar: Avatar) -> void:
 func _prewarm() -> void:
 	var cam := avatar.camera
 	var nodes: Array[Node] = []
-	for sh: Shader in [SH_RING]:
+	# traje del cuerpo, anillo de onda: se compilan antes del primer uso (sin tirón)
+	for sh: Shader in [SH_RING, AvatarBody.SUIT_SHADER]:
 		var mi := MeshInstance3D.new()
 		var q := QuadMesh.new()
 		q.size = Vector2(0.2, 0.2)
@@ -69,6 +70,7 @@ func _prewarm() -> void:
 	cam.add_child(dm)
 	dm.position = Vector3(0, 0, -1.0)
 	nodes.append(dm)
+	_ensure_trail()
 	_overlay.visible = true
 	(_overlay.material as ShaderMaterial).set_shader_parameter(&"intensity", 0.0)
 	for i in 3:

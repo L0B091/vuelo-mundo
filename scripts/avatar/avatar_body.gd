@@ -5,6 +5,7 @@ extends Node3D
 ## y pose de vuelo según el estado del Avatar. Todo lo de "look" sale de CharacterDef, así que
 ## trajes, peinados y accesorios nuevos se agregan sin tocar la lógica de vuelo.
 
+const SUIT_SHADER := preload("res://shaders/hero_suit.gdshader")
 const ANIM := {"idle": "Idle", "walk": "Walk", "run": "Sprint", "fly": "Jump", "land": "Jump_Land"}
 
 var def: CharacterDef
@@ -34,12 +35,25 @@ func setup(p_def: CharacterDef) -> void:
 	model.scale = Vector3.ONE * def.height_scale
 	pivot.add_child(model)
 	skeleton = model.find_children("*", "Skeleton3D", true, false)[0]
-	anim = model.find_children("*", "AnimationPlayer", true, false)[0]
-	for n in ANIM.values():
-		if anim.has_animation(n) and n != "Jump_Land":
-			anim.get_animation(n).loop_mode = Animation.LOOP_LINEAR
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	if players.is_empty():
+		# cuerpo sin animaciones propias: se le monta la biblioteca del mismo esqueleto
+		anim = AnimationPlayer.new()
+		anim.name = "AnimationPlayer"
+		model.add_child(anim)
+		var src: Node = (load(def.anim_scene) as PackedScene).instantiate()
+		var sp := src.find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+		anim.add_animation_library("", sp.get_animation_library(""))
+		src.free()
+	else:
+		anim = players[0]
+	for n: String in ANIM.values():
+		var an := _anim_name(n)
+		if an != "" and n != "Jump_Land":
+			anim.get_animation(an).loop_mode = Animation.LOOP_LINEAR
 	pose = FlightPose.new()
-	pose.female = def.body == "female"
+	# el maniquí único se ajustaba para "femenino"; los cuerpos nuevos ya son distintos
+	pose.female = def.body == "female" and def.base_scene == CharacterDef.BASE_SCENE
 	skeleton.add_child(pose)
 	_apply_look()
 	_play("idle")
@@ -50,14 +64,7 @@ func _apply_look() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		for s in mi.mesh.get_surface_count():
 			var src := mi.mesh.surface_get_material(s)
-			var m := StandardMaterial3D.new()
-			var main := src == null or src.resource_name != "M_Joints"
-			m.albedo_color = def.suit_color if main else def.accent_color
-			m.roughness = 0.45 if main else 0.35
-			m.metallic = 0.0 if main else 0.2
-			m.rim_enabled = true
-			m.rim = 0.25
-			mi.set_surface_override_material(s, m)
+			mi.set_surface_override_material(s, _suit_material(src))
 	_attach_hair()
 	for acc: String in def.accessories:
 		match acc:
@@ -70,9 +77,66 @@ func _apply_look() -> void:
 				_attach_ring("DEF-forearm.R", 0.045, 0.07, def.accent_color, Vector3(0, 0.2, 0))
 
 
+func _anim_name(n: String) -> String:
+	if anim.has_animation(n):
+		return n
+	if anim.has_animation(n + "_Loop"):
+		return n + "_Loop"
+	return ""
+
+
+## Material del traje según CharacterDef. Las texturas PBR originales (color, normal,
+## rugosidad) se conservan; el estilo solo tiñe/ajusta. Ojos y cejas quedan como vienen.
+func _suit_material(src: Material) -> Material:
+	var name := src.resource_name if src != null else ""
+	if src is BaseMaterial3D and (name.contains("Eye") or name.contains("Hair")):
+		return src
+	if not (src is BaseMaterial3D):
+		# maniquí sin texturas (UAL): colores planos de traje/acento
+		var m := StandardMaterial3D.new()
+		var main := src == null or name != "M_Joints"
+		m.albedo_color = def.suit_color if main else def.accent_color
+		m.roughness = 0.45 if main else 0.35
+		m.rim_enabled = true
+		m.rim = 0.25
+		return m
+	var mask_path := def.base_scene.get_basename() + "_suitmask.png"
+	if def.suit_style != "classic" and ResourceLoader.exists(mask_path):
+		var bm := src as BaseMaterial3D
+		var sm := ShaderMaterial.new()
+		sm.shader = SUIT_SHADER
+		sm.set_shader_parameter(&"base_tex", bm.albedo_texture)
+		sm.set_shader_parameter(&"normal_tex", bm.normal_texture)
+		sm.set_shader_parameter(&"rough_tex", bm.roughness_texture)
+		sm.set_shader_parameter(&"mask_tex", load(mask_path))
+		var sc := def.suit_color
+		if def.suit_style == "stealth":
+			sc = Color(0.07, 0.07, 0.08)
+		sm.set_shader_parameter(&"suit_color", sc)
+		sm.set_shader_parameter(&"accent_color", def.accent_color)
+		sm.set_shader_parameter(&"metal", 0.7 if def.suit_style == "metal" else 0.0)
+		return sm
+	var mm := (src as BaseMaterial3D).duplicate() as BaseMaterial3D
+	match def.suit_style:
+		"color":
+			mm.albedo_color = def.suit_color.lerp(Color.WHITE, 0.15)
+		"metal":
+			mm.albedo_color = def.suit_color
+			mm.metallic = 0.65
+			mm.roughness = 0.32
+		"stealth":
+			mm.albedo_color = Color(0.16, 0.16, 0.18)
+			mm.roughness = 0.75
+	mm.rim_enabled = true
+	mm.rim = 0.2
+	mm.rim_tint = 0.4
+	return mm
+
+
 func _attach(bone: String) -> BoneAttachment3D:
 	var ba := BoneAttachment3D.new()
-	ba.bone_name = bone
+	var bi := FlightPose.find_any(skeleton, bone)
+	ba.bone_name = skeleton.get_bone_name(bi) if bi >= 0 else bone
 	skeleton.add_child(ba)
 	return ba
 
@@ -82,8 +146,11 @@ func _attach_hair() -> void:
 		return
 	var ba := _attach("DEF-head")
 	var m := StandardMaterial3D.new()
-	m.albedo_color = def.hair_color
-	m.roughness = 0.6
+	m.albedo_color = def.hair_color * 2.2
+	m.albedo_texture = load("res://assets/characters/superhero/T_Hair_1_BaseColor.png")
+	m.uv1_triplanar = true
+	m.uv1_scale = Vector3(6, 6, 6)
+	m.roughness = 0.55
 	var cap := SphereMesh.new()
 	cap.radius = 0.112
 	cap.height = 0.2
@@ -123,35 +190,25 @@ func _attach_ring(bone: String, radius: float, h: float, c: Color, off: Vector3)
 
 
 func _attach_cape() -> void:
-	var ba := _attach("DEF-spine.003")
-	var q := QuadMesh.new()
-	q.size = Vector2(0.48, 1.15)
-	q.subdivide_width = 3
-	q.subdivide_depth = 10
-	var mi := MeshInstance3D.new()
-	mi.name = "Capa"
-	mi.mesh = q
-	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/cape.gdshader")
-	m.set_shader_parameter(&"color", def.accent_color)
-	mi.material_override = m
-	mi.position = Vector3(0, -0.42, -0.13)
-	mi.rotation_degrees = Vector3(8, 0, 0)
-	ba.add_child(mi)
+	# capa de tela simulada (antes: quad con sombreador de vaivén)
+	var cape := CapeCloth.new()
+	cape.name = "Capa"
+	pivot.add_child(cape)
+	cape.setup(self, def.accent_color)
 
 
 func set_cape_wind(v: float) -> void:
-	var c := model.find_child("Capa", true, false) as MeshInstance3D
+	var c := pivot.get_node_or_null("Capa") as CapeCloth
 	if c != null:
-		(c.material_override as ShaderMaterial).set_shader_parameter(&"wind", v)
+		c.wind_scale = 0.6 + v
 
 
 func _play(key: String) -> void:
 	if _cur_anim == key:
 		return
 	_cur_anim = key
-	var n: String = ANIM[key]
-	if anim.has_animation(n):
+	var n := _anim_name(ANIM[key])
+	if n != "":
 		anim.play(n, 0.25)
 
 

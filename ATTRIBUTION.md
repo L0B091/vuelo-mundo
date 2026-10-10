@@ -49,6 +49,7 @@ Mapa en el juego: «© OpenStreetMap contributors, NOAA NCEI ETOPO 2022, Natural
 | Recurso | Autor | Licencia | Fuente | Uso |
 |---|---|---|---|---|
 | Universal Animation Library (versión estándar gratuita, glTF "Godot Standard": maniquí con esqueleto Rigify + 45 animaciones) | Quaternius | CC0 1.0 | https://quaternius.com/packs/universalanimationlibrary.html — copia glTF publicada en https://github.com/J-Ponzo/gltf-universal-animation-library (redistribución del archivo de itch.io, 2025-06-10) | Malla base de ambos personajes; animaciones Idle, Walk, Sprint, Jump, Jump_Land |
+| Universal Base Characters — cuerpos "Superhero" masculino y femenino (glTF, texturas PBR) + Universal Animation Library en esqueleto UE | Quaternius | CC0 1.0 | https://quaternius.com/packs/universalbasecharacters.html — copia glTF publicada (CC0) en https://codeberg.org/jamesonBradfield/Quaternius_IK_Rigged_with_animations (sin pasar por el checkout de itch.io) | Cuerpos separados de los personajes; las máscaras de traje (`*_suitmask.png`, `pipeline/make_suit_masks.py`), el sombreador de traje y la capa de tela simulada son obra propia |
 
 Las poses de vuelo (despegue, crucero con brazos atrás, puño adelante, flotación erguida y
 aterrizaje pesado), el pelo, la capa, el cinturón, los colores y todos los efectos (onda

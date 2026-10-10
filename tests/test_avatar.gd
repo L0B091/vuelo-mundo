@@ -10,7 +10,7 @@ func _watch(sk: Skeleton3D, bones: Array) -> void:
 	sk.skeleton_updated.connect(
 		func() -> void:
 			for bn: String in bones:
-				_seen[bn] = sk.get_bone_global_pose(sk.find_bone(bn)).origin
+				_seen[bn] = sk.get_bone_global_pose(FlightPose.find_any(sk, bn)).origin
 	)
 
 
@@ -27,7 +27,7 @@ func test_presets_differ_and_are_customizable() -> void:
 	assert_eq(m.body, "male")
 	assert_eq(f.body, "female")
 	assert_ne(m.hair_style, f.hair_style)
-	assert_lt(f.height_scale, m.height_scale)
+	assert_ne(f.base_scene, m.base_scene, "cuerpos separados masculino/femenino")
 	assert_true(m.accessories.has("cape"))
 
 
