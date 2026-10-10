@@ -110,5 +110,65 @@
   ],
   "source": "https://polyhaven.com/a/qwantani_noon_puresky",
   "license": "CC0 1.0"
+ },
+ {
+  "id": "street_lamp_02",
+  "kind": "model",
+  "use": "farolas a lo largo de las calles",
+  "name": "Street Lamp 02",
+  "authors": [
+   "Josh Dean"
+  ],
+  "polycount": 20338,
+  "source": "https://polyhaven.com/a/street_lamp_02",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "metal_trash_can",
+  "kind": "model",
+  "use": "cestos de basura en veredas y plazas",
+  "name": "Metal Trash Can",
+  "authors": [
+   "GurJas Studios"
+  ],
+  "polycount": 13960,
+  "source": "https://polyhaven.com/a/metal_trash_can",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "painted_wooden_bench",
+  "kind": "model",
+  "use": "bancos en parques y en el malecón",
+  "name": "Painted Wooden Bench",
+  "authors": [
+   "Kirill Sannikov"
+  ],
+  "polycount": 630,
+  "source": "https://polyhaven.com/a/painted_wooden_bench",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "plastic_monobloc_chair_01",
+  "kind": "model",
+  "use": "sillas de plástico frente a cafés",
+  "name": "Plastic Monobloc Chair 01",
+  "authors": [
+   "Kuutti Siitonen"
+  ],
+  "polycount": 3356,
+  "source": "https://polyhaven.com/a/plastic_monobloc_chair_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "potted_plant_04",
+  "kind": "model",
+  "use": "macetas frente a comercios",
+  "name": "Potted Plant 04",
+  "authors": [
+   "James Ray Cock"
+  ],
+  "polycount": 6097,
+  "source": "https://polyhaven.com/a/potted_plant_04",
+  "license": "CC0 1.0"
  }
 ]

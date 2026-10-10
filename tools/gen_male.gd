@@ -11,6 +11,38 @@ const L_WALK := 2
 const L_SOLID := 8
 const TEX := "res://assets/textures/%s/%s_%s.jpg"
 
+const PROP_CELL := 250.0
+## tipo -> [distancia de dibujo base (m), sombra]
+const PROP_RANGE := {
+	"lamp": [420.0, true],
+	"scooter": [160.0, false],
+	"car": [300.0, true],
+	"bench": [150.0, false],
+	"bin": [120.0, false],
+	"chair": [90.0, false],
+	"plant": [110.0, false],
+	"ac": [170.0, false],
+	"balcony": [330.0, true],
+	"tree": [500.0, true]
+}
+const PH_MODEL := {
+	"lamp": "street_lamp_02",
+	"bin": "metal_trash_can",
+	"bench": "painted_wooden_bench",
+	"chair": "plastic_monobloc_chair_01",
+	"plant": "potted_plant_04"
+}
+const SCOOTER_COLORS := [
+	Color(0.9, 0.9, 0.92),
+	Color(0.08, 0.08, 0.09),
+	Color(0.7, 0.05, 0.06),
+	Color(0.1, 0.2, 0.55),
+	Color(0.55, 0.57, 0.6),
+	Color(0.85, 0.7, 0.1),
+	Color(0.95, 0.45, 0.65),
+	Color(0.2, 0.45, 0.3)
+]
+
 var _mats: Dictionary = {}
 var _ad_registry: Array = []
 
@@ -273,18 +305,245 @@ func _palm_mesh() -> ArrayMesh:
 				st.add_vertex(q[0])
 			prev_c = c1
 	var mesh := st.commit()
-	var m := StandardMaterial3D.new()
-	m.albedo_texture = load("res://assets/generated/palm_frond.png")
-	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-	m.alpha_scissor_threshold = 0.4
-	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.vertex_color_use_as_albedo = true
-	m.roughness = 0.8
-	m.uv1_scale = Vector3(1, 1, 1)
+	# las palmeras se mecen con el viento (shader de vértice, sin costo de CPU)
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/palm.gdshader")
+	m.set_shader_parameter(&"frond", load("res://assets/generated/palm_frond.png"))
 	mesh.surface_set_material(0, m)
 	ResourceSaver.save(mesh, "res://materials/palm_mesh.res")
 	_mats.palm_mesh = load("res://materials/palm_mesh.res")
 	return _mats.palm_mesh
+
+
+func _prop_mesh(kind: String) -> Mesh:
+	var key := "prop_" + kind
+	if _mats.has(key):
+		return _mats[key]
+	var mesh: Mesh
+	if PH_MODEL.has(kind):
+		var id: String = PH_MODEL[kind]
+		var sc: Node = (load("res://assets/models/%s/%s.gltf" % [id, id]) as PackedScene).instantiate()
+		mesh = _merge_meshes(sc)
+		sc.free()
+	else:
+		match kind:
+			"scooter":
+				mesh = PropMeshes.scooter()
+			"car":
+				mesh = PropMeshes.car()
+			"ac":
+				mesh = PropMeshes.aircon()
+			"balcony":
+				mesh = PropMeshes.balcony()
+			"tree":
+				mesh = PropMeshes.tree()
+			"dhoni":
+				mesh = PropMeshes.dhoni()
+			"speedboat":
+				mesh = PropMeshes.speedboat()
+			"bird":
+				mesh = PropMeshes.bird()
+	if kind in ["dhoni", "speedboat"]:
+		var bm := ShaderMaterial.new()
+		bm.shader = load("res://shaders/boat_bob.gdshader")
+		(mesh as ArrayMesh).surface_set_material(0, bm)
+	if kind in ["scooter", "car"]:
+		# color por instancia (MultiMesh.use_colors) multiplicado al color de vértice
+		var mat := (mesh as ArrayMesh).surface_get_material(0) as StandardMaterial3D
+		mat.vertex_color_is_srgb = true
+	var path := "res://materials/prop_%s.res" % kind
+	ResourceSaver.save(mesh, path)
+	_mats[key] = load(path)
+	return _mats[key]
+
+
+## Une las superficies de todos los MeshInstance3D de un glTF en un solo ArrayMesh (con sus
+## materiales), aplicando las transformaciones de los nodos.
+func _merge_meshes(sc: Node) -> ArrayMesh:
+	var out := ArrayMesh.new()
+	var stack: Array = [[sc, Transform3D.IDENTITY]]
+	while not stack.is_empty():
+		var it: Array = stack.pop_back()
+		var n: Node = it[0]
+		var x: Transform3D = it[1]
+		if n is Node3D:
+			x = x * (n as Node3D).transform if n != sc else x
+		if n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			for si in mi.mesh.get_surface_count():
+				var st := SurfaceTool.new()
+				st.create_from(mi.mesh, si)
+				var arr := st.commit_to_arrays()
+				var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+				var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+				for k in v.size():
+					v[k] = x * v[k]
+					if nn.size() == v.size():
+						nn[k] = (x.basis * nn[k]).normalized()
+				arr[Mesh.ARRAY_VERTEX] = v
+				if nn.size() == v.size():
+					arr[Mesh.ARRAY_NORMAL] = nn
+				out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+				var mat := mi.get_active_material(si)
+				out.surface_set_material(out.get_surface_count() - 1, mat)
+		for c in n.get_children():
+			stack.append([c, x])
+	return out
+
+
+## Mobiliario y detalle urbano: un MultiMesh por tipo y por celda de 250 m; densidad y distancia
+## se ajustan por perfil en tiempo de ejecución (DetailLod) sobre instancias barajadas.
+func _props(root: Node3D, meta: Dictionary) -> void:
+	if not meta.has("props"):
+		return
+	var holder := Node3D.new()
+	holder.name = "Detalle"
+	root.add_child(holder)
+	var props: Dictionary = meta.props
+	var total := 0
+	for kind: String in PROP_RANGE:
+		var all_items: Array = props.get(kind, [])
+		# raleo: Malé tiene motos y aires por todos lados, pero el móvil no
+		var every: int = {"scooter": 3, "ac": 2, "balcony": 2}.get(kind, 1)
+		var items: Array = []
+		for k in all_items.size():
+			if k % every == 0:
+				items.append(all_items[k])
+		if items.is_empty():
+			continue
+		var cells: Dictionary = {}
+		for it: Array in items:
+			var key := Vector2i(int(float(it[0]) / PROP_CELL), int(float(it[2]) / PROP_CELL))
+			if not cells.has(key):
+				cells[key] = []
+			cells[key].append(it)
+		var mesh := _prop_mesh(kind)
+		for key: Vector2i in cells:
+			var lst: Array = cells[key]
+			# barajado determinista: un prefijo es una muestra pareja (densidad por perfil)
+			var rnd := RandomNumberGenerator.new()
+			rnd.seed = hash(kind) ^ (key.x * 73856093) ^ (key.y * 19349663)
+			for a in range(lst.size() - 1, 0, -1):
+				var b := rnd.randi_range(0, a)
+				var tmp = lst[a]
+				lst[a] = lst[b]
+				lst[b] = tmp
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = kind in ["scooter", "car"]
+			mm.mesh = mesh
+			mm.instance_count = lst.size()
+			var org := Vector3(key.x * PROP_CELL, 0, key.y * PROP_CELL)
+			for k in lst.size():
+				var it: Array = lst[k]
+				var b := Basis(Vector3.UP, float(it[3])).scaled(Vector3.ONE * float(it[4]))
+				mm.set_instance_transform(k, Transform3D(b, Vector3(it[0], it[1], it[2]) - org))
+				if mm.use_colors:
+					var ci := hash(Vector2(it[0], it[2])) % SCOOTER_COLORS.size()
+					mm.set_instance_color(k, SCOOTER_COLORS[ci])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "%s_%d_%d" % [kind, key.x, key.y]
+			mmi.multimesh = mm
+			mmi.position = org
+			mmi.cast_shadow = (
+				GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				if PROP_RANGE[kind][1]
+				else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			)
+			mmi.visibility_range_end = PROP_RANGE[kind][0]
+			mmi.visibility_range_end_margin = 20.0
+			mmi.set_meta(&"detail_kind", kind)
+			mmi.set_meta(&"detail_count", lst.size())
+			mmi.set_meta(&"detail_range", PROP_RANGE[kind][0])
+			mmi.set_script(load("res://scripts/world/detail_lod.gd"))
+			holder.add_child(mmi)
+			total += lst.size()
+	_cables(holder, props.get("cables", []))
+	_boats_birds(root, meta)
+	print("  detalle urbano: %d instancias" % total)
+
+
+## Cables entre postes: cintas finas con catenaria, una malla por zona.
+func _cables(holder: Node3D, cables: Array) -> void:
+	if cables.is_empty():
+		return
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for c: Array in cables:
+		var a := Vector3(c[0], c[1], c[2])
+		var b := Vector3(c[3], c[4], c[5])
+		var segs := 8
+		var sag := a.distance_to(b) * 0.04
+		for wire in 2:
+			var off := Vector3(0, -0.35 * wire, 0)
+			for k in segs:
+				var t0 := float(k) / segs
+				var t1 := float(k + 1) / segs
+				var p0 := a.lerp(b, t0) + off + Vector3(0, -sag * 4.0 * t0 * (1.0 - t0), 0)
+				var p1 := a.lerp(b, t1) + off + Vector3(0, -sag * 4.0 * t1 * (1.0 - t1), 0)
+				var w := Vector3(0, 0.025, 0)
+				for v: Vector3 in [p0 - w, p1 - w, p1 + w, p0 - w, p1 + w, p0 + w]:
+					st.set_normal(Vector3.UP)
+					st.add_vertex(v)
+	var mesh := st.commit()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.05, 0.05, 0.05)
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.roughness = 0.6
+	mesh.surface_set_material(0, m)
+	var mi := MeshInstance3D.new()
+	mi.name = "Cables"
+	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_end = 250.0
+	holder.add_child(mi)
+
+
+## Barcos fondeados que se mecen (puerto/malecón) y gaviotas en círculos sobre la costa.
+func _boats_birds(root: Node3D, meta: Dictionary) -> void:
+	var boats: Array = meta.get("boats", [])
+	for kind: String in ["dhoni", "speedboat"]:
+		var lst: Array = []
+		for k in boats.size():
+			if (k % 3 == 0) == (kind == "speedboat"):
+				lst.append(boats[k])
+		if lst.is_empty():
+			continue
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = _prop_mesh(kind)
+		mm.instance_count = lst.size()
+		for k in lst.size():
+			var it: Array = lst[k]
+			var b := Basis(Vector3.UP, float(it[3])).scaled(Vector3.ONE * float(it[4]) * 0.9)
+			mm.set_instance_transform(k, Transform3D(b, Vector3(it[0], -0.1, it[2])))
+		var mmi := MultiMeshInstance3D.new()
+		mmi.name = "Barcos_" + kind
+		mmi.multimesh = mm
+		mmi.visibility_range_end = 1500.0
+		root.add_child(mmi)
+	# gaviotas: 3 bandadas sobre la costa
+	var mm2 := MultiMesh.new()
+	mm2.transform_format = MultiMesh.TRANSFORM_3D
+	mm2.use_custom_data = true
+	mm2.mesh = _prop_mesh("bird")
+	var n_b := 24
+	mm2.instance_count = n_b
+	var rnd := RandomNumberGenerator.new()
+	rnd.seed = hash(meta.id)
+	var w: float = meta.size[0]
+	var h: float = meta.size[1]
+	for k in n_b:
+		var c := Vector3(rnd.randf_range(0.1, 0.9) * w, meta.deck_y + 22.0, rnd.randf_range(0.1, 0.9) * h)
+		mm2.set_instance_transform(k, Transform3D(Basis.IDENTITY, c))
+		mm2.set_instance_custom_data(k, Color(rnd.randf(), rnd.randf(), rnd.randf(), rnd.randf()))
+	var bi := MultiMeshInstance3D.new()
+	bi.name = "Gaviotas"
+	bi.multimesh = mm2
+	bi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	bi.visibility_range_end = 600.0
+	bi.custom_aabb = AABB(Vector3(-50, -20, -50), Vector3(w + 100, 80, h + 100))
+	root.add_child(bi)
 
 
 func _centroid(poly: Array) -> Vector3:
@@ -432,6 +691,8 @@ func _build(zid: String) -> void:
 	var root := Node3D.new()
 	root.name = zid
 	root.set_meta(&"zone_id", zid)
+	root.set_meta(&"npc_paths", meta.get("paths", {}))
+	root.set_meta(&"deck_y", meta.deck_y)
 	var cols := Node3D.new()
 	cols.name = "Colisiones"
 	root.add_child(cols)
@@ -492,6 +753,7 @@ func _build(zid: String) -> void:
 		mmi.visibility_range_end = 900.0
 		root.add_child(mmi)
 	_ads(root, meta)
+	_props(root, meta)
 	_own(root, root)
 	var ps := PackedScene.new()
 	ps.pack(root)
