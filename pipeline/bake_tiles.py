@@ -240,7 +240,8 @@ def bake_detail(stats):
     import lagoons
     lat_rows = [global_to_lonlat(oe, on - r * step)[1] for r in range(rows)]
     h, lag, _ = lagoons.correct(h, land, reef, ds, lat_rows, step)
-    print("[detalle] micro-mapas tallados:", carve_sites(h, oe, on, step))
+    # (ya no se talla el terreno bajo los micro-mapas: el shader recorta el conector dentro de
+    # las zonas cargadas y el avatar ignora su colisión ahí)
     write_level(DETAIL_LEVEL, DETAIL_SAMPLES, h, land, i0, j0, ni, nj, stats)
     stats["detail_parents"] = [[ci, cj] for cj in range(cj0, cj1 + 1) for ci in range(ci0, ci1 + 1)]
     preview(h, land, REPO / "docs" / "previews" / "maldivas_L8.png", 1600)

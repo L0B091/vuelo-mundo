@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_pavers/concrete_pavers_diff.jpg" id="1_8ik1w"]
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_pavers/concrete_pavers_nor_gl.jpg" id="2_8lt1w"]
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_pavers/concrete_pavers_arm.jpg" id="3_gepb7"]
+
+[resource]
+albedo_texture = ExtResource("1_8ik1w")
+orm_texture = ExtResource("3_gepb7")
+normal_enabled = true
+normal_texture = ExtResource("2_8lt1w")
+texture_filter = 5

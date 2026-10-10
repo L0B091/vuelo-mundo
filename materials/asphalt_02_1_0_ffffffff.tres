@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/asphalt_02/asphalt_02_diff.jpg" id="1_d7ruv"]
+[ext_resource type="Texture2D" path="res://assets/textures/asphalt_02/asphalt_02_nor_gl.jpg" id="2_55ipx"]
+[ext_resource type="Texture2D" path="res://assets/textures/asphalt_02/asphalt_02_arm.jpg" id="3_3ohe4"]
+
+[resource]
+albedo_texture = ExtResource("1_d7ruv")
+orm_texture = ExtResource("3_3ohe4")
+normal_enabled = true
+normal_texture = ExtResource("2_55ipx")
+texture_filter = 5

@@ -1,0 +1,13 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_diff.jpg" id="1_1w3gr"]
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_nor_gl.jpg" id="2_f8mhj"]
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_arm.jpg" id="3_p52oa"]
+
+[resource]
+albedo_color = Color(0.85, 0.85, 0.85, 1)
+albedo_texture = ExtResource("1_1w3gr")
+orm_texture = ExtResource("3_p52oa")
+normal_enabled = true
+normal_texture = ExtResource("2_f8mhj")
+texture_filter = 5

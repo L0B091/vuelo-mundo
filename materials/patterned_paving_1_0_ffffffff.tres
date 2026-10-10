@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/patterned_paving/patterned_paving_diff.jpg" id="1_7awol"]
+[ext_resource type="Texture2D" path="res://assets/textures/patterned_paving/patterned_paving_nor_gl.jpg" id="2_nlcbs"]
+[ext_resource type="Texture2D" path="res://assets/textures/patterned_paving/patterned_paving_arm.jpg" id="3_c08fs"]
+
+[resource]
+albedo_texture = ExtResource("1_7awol")
+orm_texture = ExtResource("3_c08fs")
+normal_enabled = true
+normal_texture = ExtResource("2_nlcbs")
+texture_filter = 5

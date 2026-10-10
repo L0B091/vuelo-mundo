@@ -4,3 +4,5 @@ build/
 __pycache__/
 /android/
 export_credentials.cfg
+data/sites/*/*.vmm
+data/sites/*/*.f32

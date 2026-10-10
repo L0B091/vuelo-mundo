@@ -5,6 +5,7 @@ extends Node3D
 ##   --start=lat,lon,alt,rumbo   posición inicial (por defecto: aproximación a Malé, Maldivas)
 ##   --speed=m/s                 velocidad inicial
 ##   --screenshot=ruta.png       guarda una captura cuando el streaming termina y sale
+##   --walk                     (con --screenshot) aterriza antes de capturar (vista de peatón)
 ##   --pitch=grados             inclinación inicial de la mirada (negativo = abajo)
 ##   --profile=low|medium|high|ultra  fuerza un perfil sin guardarlo
 ##   --hide-hud                  oculta el HUD (capturas limpias)
@@ -112,14 +113,14 @@ func _build_environment() -> void:
 	var we := WorldEnvironment.new()
 	env = Environment.new()
 	var sky := Sky.new()
-	var psm := ProceduralSkyMaterial.new()
-	psm.sky_top_color = Color(0.20, 0.45, 0.85)
-	psm.sky_horizon_color = Color(0.70, 0.82, 0.92)
-	# más allá del plano lejano se ve el "suelo" del cielo: que sea igual a la bruma
-	psm.ground_horizon_color = FOG_COLOR
-	psm.ground_bottom_color = FOG_COLOR
-	psm.ground_curve = 0.02
+	# cielo HDRI CC0 (Poly Haven "Qwantani Noon (Pure Sky)"); bajo el horizonte = bruma
+	var psm := ShaderMaterial.new()
+	psm.shader = load("res://shaders/sky_hdri.gdshader")
+	psm.set_shader_parameter(&"panorama", load("res://assets/hdri/qwantani_noon_puresky_2k.hdr"))
+	psm.set_shader_parameter(&"below_color", FOG_COLOR)
+	psm.set_shader_parameter(&"exposure", 0.9)
 	sky.sky_material = psm
+	sky.radiance_size = Sky.RADIANCE_SIZE_256
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -152,6 +153,7 @@ func _process(dt: float) -> void:
 	tiles.update(gp, hv, spd)
 	var t1 := Time.get_ticks_usec()
 	zones.update(gp, hv, spd)
+	avatar.set_inside_site(zones.inside_ready_site)
 	var t2 := Time.get_ticks_usec()
 	# el dt de este cuadro mide el trabajo del cuadro anterior
 	if _prev_swapped and _elapsed > 3.0:
@@ -194,7 +196,13 @@ func _handle_cli(_dt: float) -> void:
 		print(telemetry())
 		get_tree().quit()
 	if args.has("screenshot"):
-		_idle_frames = _idle_frames + 1 if tiles.is_idle() and _elapsed > 1.0 else 0
+		var zones_idle := zones.pending_collisions() == 0
+		for id: String in zones.live:
+			if zones.live[id].state == "loading":
+				zones_idle = false
+		if args.has("walk") and avatar.state == Avatar.State.FLY and zones_idle and _elapsed > 1.0:
+			avatar.request_land()
+		_idle_frames = _idle_frames + 1 if tiles.is_idle() and zones_idle and _elapsed > 1.0 else 0
 		if _idle_frames == 90:
 			var img := get_viewport().get_texture().get_image()
 			var path := str(args.screenshot)

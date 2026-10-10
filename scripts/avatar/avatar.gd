@@ -16,6 +16,7 @@ enum State { FLY, LANDING, WALK }
 
 const LAYER_TERRAIN := 1
 const LAYER_WALKABLE := 2
+const LAYER_BUILDINGS := 8  # capa 4: edificios/muros (sólidos, no caminables)
 const EYE_HEIGHT := 1.65
 const FLY_EYE := 0.9
 const MAX_SPEED := 340.0
@@ -53,7 +54,7 @@ var _land_target_y: float = 0.0
 
 func _ready() -> void:
 	collision_layer = 4
-	collision_mask = LAYER_TERRAIN | LAYER_WALKABLE
+	collision_mask = LAYER_TERRAIN | LAYER_WALKABLE | LAYER_BUILDINGS
 	floor_snap_length = 0.3
 	floor_max_angle = deg_to_rad(50.0)
 	var cs := CollisionShape3D.new()
@@ -235,7 +236,7 @@ func _enter_walk() -> void:
 func request_land() -> void:
 	if state != State.FLY:
 		return
-	var hit := _ray_down(LAND_RAY * scale_k(), LAYER_TERRAIN | LAYER_WALKABLE)
+	var hit := _ray_down(LAND_RAY * scale_k(), ground_mask())
 	if hit.is_empty():
 		message.emit("Demasiado alto para aterrizar: bajá a menos de %d m" % int(LAND_RAY))
 		return
@@ -261,6 +262,20 @@ func request_takeoff() -> void:
 	state_changed.emit(state)
 
 
+## Dentro de un micro-mapa cargado el conector (terreno tosco) no cuenta: el micro-mapa
+## trae su propio suelo y el relieve de 611 m podría asomar por encima de calles y playas.
+func set_inside_site(inside: bool) -> void:
+	var m := LAYER_WALKABLE | LAYER_BUILDINGS
+	if not inside:
+		m |= LAYER_TERRAIN
+	if collision_mask != m:
+		collision_mask = m
+
+
+func ground_mask() -> int:
+	return collision_mask
+
+
 func _ray_down(length: float, mask: int) -> Dictionary:
 	var space := get_world_3d().direct_space_state
 	var from := global_position + Vector3(0, 0.5, 0)
@@ -269,7 +284,7 @@ func _ray_down(length: float, mask: int) -> Dictionary:
 
 
 func _probe_ground() -> void:
-	var hit := _ray_down(30000.0, LAYER_TERRAIN | LAYER_WALKABLE)
+	var hit := _ray_down(30000.0, ground_mask())
 	if hit.is_empty():
 		agl = maxf(position.y, 0.0) / scale_k()  # sobre el mar
 		ground_kind = ""

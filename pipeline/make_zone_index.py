@@ -36,31 +36,30 @@ mv = country("MV", "Maldivas", 72.5, -0.8, 74.0, 7.2, ["IN", "LK"], True,
 country("IN", "India (pendiente)", 68.0, 6.5, 97.5, 35.5, ["MV", "LK"], False)
 country("LK", "Sri Lanka (pendiente)", 79.5, 5.8, 82.0, 9.9, ["MV", "IN"], False)
 
-# --- Micro-mapas de prueba: dos escenas hechas por separado con el MISMO origen de referencia
-# y la MISMA escala (k del país), adyacentes por el borde este/oeste.
-mv_k = k_at(mv["origin"][1] - mv["size"][1] / 2)
-SITE_W, SITE_H = 400.0, 300.0           # metros reales (como se modela la escena)
-a_e, a_n = lonlat_to_global(73.5040, 4.1790)
-w, h = SITE_W * mv_k, SITE_H * mv_k       # metros globales
-
-
-def site(id_, name, e, n, neighbors, landing_local):
-    lx, ly, lz = landing_local
-    zones.append({"id": id_, "name": name, "kind": "site", "parent": "MV",
-                  "origin": [e, n], "size": [w, h], "neighbors": neighbors,
-                  "landing": [e + lx * mv_k, n - lz * mv_k, ly * mv_k],
-                  "scene": f"res://scenes/zones/{id_}.tscn", "available": True,
-                  "local_scale": mv_k, "test_bench": True})
-
-
-site("mv_test_male_oeste", "Banco de pruebas Malé (oeste)", a_e, a_n,
-     ["mv_test_male_este"], (370.0, 2.15, 139.0))
-site("mv_test_male_este", "Banco de pruebas Malé (este)", a_e + w, a_n,
-     ["mv_test_male_oeste"], (30.0, 2.15, 139.0))
+# --- Micro-mapa REAL de Malé (pipeline/make_male.py + tools/gen_male.gd): la isla entera,
+# partida en dos zonas oeste/este con borde común exacto. Escena en metros reales, escala k.
+male = json.loads((REPO / "data" / "sites" / "male_zones.json").read_text())
+walk = json.loads((REPO / "data" / "sites" / "male_test_walk.json").read_text())
+ids = [z["id"] for z in male]
+for z in male:
+    k = z["k"]
+    e, n = z["origin"]
+    w, h = z["size_local"][0] * k, z["size_local"][1] * k
+    entry = {"id": z["id"], "name": z["name"], "kind": "site", "parent": "MV",
+             "origin": [e, n], "size": [w, h], "neighbors": [i for i in ids if i != z["id"]],
+             "scene": f"res://scenes/zones/{z['id']}.scn", "available": True, "local_scale": k,
+             "source": "OpenStreetMap (ODbL) + generación procedural"}
+    if z["id"] == "mv_male_oeste":
+        p0 = walk["points"][0]
+        entry["landing"] = [p0[0], p0[1], 1.8 * k]
+        entry["test_walk"] = walk["points"]
+    else:
+        entry["landing"] = [e + w * 0.3, n - h * 0.6, 1.8 * k]
+    zones.append(entry)
 
 out = {"version": 1,
        "crs": "EPSG:3857 metros; origen = esquina NO; tamaño = (este, sur)",
        "zones": zones}
 path = REPO / "data" / "zone_index.json"
 path.write_text(json.dumps(out, indent=1))
-print("escrito", path, "zonas:", len(zones), "k país:", mv_k)
+print("escrito", path, "zonas:", len(zones))

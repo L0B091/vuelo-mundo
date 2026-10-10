@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_floor_02/concrete_floor_02_diff.jpg" id="1_115fh"]
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_floor_02/concrete_floor_02_nor_gl.jpg" id="2_tdy55"]
+[ext_resource type="Texture2D" path="res://assets/textures/concrete_floor_02/concrete_floor_02_arm.jpg" id="3_pwgci"]
+
+[resource]
+albedo_texture = ExtResource("1_115fh")
+orm_texture = ExtResource("3_pwgci")
+normal_enabled = true
+normal_texture = ExtResource("2_tdy55")
+texture_filter = 5

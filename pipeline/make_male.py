@@ -1,0 +1,658 @@
+#!/usr/bin/env python3
+"""Micro-mapa REAL de Malé a partir de OpenStreetMap (ODbL), sin datos de Google.
+
+Entrada:  raw/osm_male.json (Overpass, ver fetch_male en este archivo)
+Salida:   data/sites/<zona>/meta.json + capas binarias (float32 / int32) que
+          tools/gen_male.gd convierte en escenas Godot (res://scenes/zones/<zona>.scn).
+
+La isla se parte en dos zonas (oeste/este) con borde común exacto. Todo se genera en metros
+reales locales a la zona: x = este, z = sur, y = arriba; origen = esquina NO de la zona.
+Lo que OSM no tiene (muchas manzanas sin edificios cargados) se completa con lotes
+procedurales dentro de las manzanas reales: se marcan como "procedural" en meta.json.
+"""
+import hashlib
+import json
+import math
+import struct
+import sys
+import urllib.parse
+import urllib.request
+
+import mapbox_earcut as earcut
+import numpy as np
+from shapely import affinity
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
+from shapely.ops import linemerge, polygonize, unary_union
+
+from vm_common import DETAIL_SAMPLES, RAW, REPO, TILES_OUT, lonlat_to_global, read_tile, tile_of, tile_origin, tile_size
+
+BBOX = (73.4950, 4.1600, 73.5350, 4.1900)  # lon0, lat0, lon1, lat1 (descarga)
+# zonas: lon0, lat_top, lon1, lat_bottom
+ZONE_W = ("mv_male_oeste", "Malé (oeste)", 73.4975, 4.1880, 73.5150, 4.1655)
+ZONE_E = ("mv_male_este", "Malé (este)", 73.5150, 4.1880, 73.5320, 4.1655)
+DECK_Y = 1.8          # suelo de la isla (m sobre el mar)
+SEAWALL_BOTTOM = -2.5
+FLOOR_H = 3.2
+ROAD_W = {"primary": 11.0, "primary_link": 7.0, "secondary": 9.0, "tertiary": 7.5,
+          "tertiary_link": 6.0, "unclassified": 6.0, "residential": 5.5, "living_street": 5.0,
+          "service": 4.0, "pedestrian": 5.0, "footway": 2.5, "path": 2.0}
+SIDEWALK_W = 1.6
+SHOP_ROADS = {"primary", "secondary", "tertiary"}
+LANDMARKS = {
+    151402193: "islamic_centre",       # Masjid-al-Sultan Muhammad Thakurufaanu Al Auzam
+    1317932599: "hukuru_miskiy",       # Mezquita del Viernes antigua (piedra de coral)
+    270847401: "republic_square",      # Jumhooree Maidan
+    602727296: "artificial_beach",
+}
+R = 6378137.0
+
+
+def fetch_male():
+    q = ("[out:json][timeout:180];(way({1},{0},{3},{2});relation({1},{0},{3},{2}););out body geom;"
+         .format(*BBOX))
+    for m in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"):
+        try:
+            req = urllib.request.Request(m, data=urllib.parse.urlencode({"data": q}).encode(),
+                                         headers={"User-Agent": "vuelo-mundo-pipeline/0.2"})
+            with urllib.request.urlopen(req, timeout=240) as r:
+                (RAW / "osm_male.json").write_bytes(r.read())
+                return
+        except Exception as e:  # noqa: BLE001
+            print("Overpass falló", m, e)
+    raise SystemExit("sin datos OSM")
+
+
+def k_at(n):
+    return math.cosh(n / R)
+
+
+class Zone:
+    def __init__(self, spec, k):
+        self.id, self.name, lon0, lat0, lon1, lat1 = spec
+        self.e0, self.n0 = lonlat_to_global(lon0, lat0)
+        e1, n1 = lonlat_to_global(lon1, lat1)
+        self.k = k
+        self.w = (e1 - self.e0) / k
+        self.h = (self.n0 - n1) / k
+        self.rect = box(0, 0, self.w, self.h)
+
+    def to_local(self, lon, lat):
+        e, n = lonlat_to_global(lon, lat)
+        return ((e - self.e0) / self.k, (self.n0 - n) / self.k)
+
+
+# ------------------------------------------------------------------ geometría de malla
+class Mesh:
+    def __init__(self):
+        self.v, self.n, self.uv, self.c, self.uv2, self.i = [], [], [], [], [], []
+
+    def add_poly(self, poly, y, uv_scale=1.0, color=(1, 1, 1, 1), normal=(0, 1, 0), y_fn=None):
+        if poly.is_empty:
+            return
+        polys = poly.geoms if hasattr(poly, "geoms") else [poly]
+        for p in polys:
+            if p.geom_type != "Polygon" or p.area < 0.05:
+                continue
+            p = p.simplify(0.05)
+            rings = [np.asarray(p.exterior.coords)[:-1]] + [np.asarray(r.coords)[:-1] for r in p.interiors]
+            rings = [r for r in rings if len(r) >= 3]
+            if not rings:
+                continue
+            verts = np.concatenate(rings)
+            ends = np.cumsum([len(r) for r in rings]).astype(np.uint32)
+            tri = earcut.triangulate_float64(verts.astype(np.float64), ends)
+            base = len(self.v)
+            for x, z in verts:
+                yy = y_fn(x, z) if y_fn else y
+                self.v.append((x, yy, z))
+                self.n.append(normal)
+                self.uv.append((x * uv_scale, z * uv_scale))
+                self.uv2.append((0.0, 0.0))
+                self.c.append(color)
+            # Godot: cara frontal = horaria vista desde el lado de la normal
+            for a in range(0, len(tri), 3):
+                t3 = [base + int(tri[a]), base + int(tri[a + 1]), base + int(tri[a + 2])]
+                p0, p1, p2 = (np.asarray(self.v[q]) for q in t3)
+                if np.cross(p1 - p0, p2 - p0)[1] > 0:
+                    t3 = [t3[0], t3[2], t3[1]]
+                self.i += t3
+
+    def add_quad(self, p0, p1, y0, y1, color=(1, 1, 1, 1), u0=0.0, uv2=(0.0, 0.0)):
+        """Pared vertical de p0 a p1 (x,z), normal hacia la derecha del recorrido."""
+        (x0, z0), (x1, z1) = p0, p1
+        dx, dz = x1 - x0, z1 - z0
+        L = math.hypot(dx, dz)
+        if L < 0.05:
+            return
+        nx, nz = dz / L, -dx / L
+        base = len(self.v)
+        for (x, z, yy, u) in ((x0, z0, y0, u0), (x1, z1, y0, u0 + L), (x1, z1, y1, u0 + L), (x0, z0, y1, u0)):
+            self.v.append((x, yy, z))
+            self.n.append((nx, 0.0, nz))
+            self.uv.append((u, yy))
+            self.uv2.append(uv2)
+            self.c.append(color)
+        self.i += [base, base + 1, base + 2, base, base + 2, base + 3]
+
+    def add_tri_list(self, verts, normals, color=(1, 1, 1, 1)):
+        base = len(self.v)
+        for p, nn in zip(verts, normals):
+            self.v.append(p)
+            self.n.append(nn)
+            self.uv.append((p[0], p[2]))
+            self.uv2.append((0.0, 0.0))
+            self.c.append(color)
+        self.i += list(range(base, base + len(verts)))
+
+    def write(self, path):
+        v = np.asarray(self.v, np.float32).reshape(-1, 3)
+        with open(path, "wb") as f:
+            f.write(struct.pack("<4sII", b"VMM1", len(v), len(self.i)))
+            f.write(v.tobytes())
+            f.write(np.asarray(self.n, np.float32).reshape(-1, 3).tobytes())
+            f.write(np.asarray(self.uv, np.float32).reshape(-1, 2).tobytes())
+            f.write(np.asarray(self.uv2, np.float32).reshape(-1, 2).tobytes())
+            f.write(np.asarray(self.c, np.float32).reshape(-1, 4).tobytes())
+            f.write(np.asarray(self.i, np.int32).tobytes())
+        return len(v), len(self.i) // 3
+
+
+def walls_of(poly, y0, y1, mesh, color, uv2=(0.0, 0.0), shop_edges=None):
+    polys = poly.geoms if hasattr(poly, "geoms") else [poly]
+    for p in polys:
+        if p.geom_type != "Polygon":
+            continue
+        p = Polygon(p.exterior.coords) if not p.exterior.is_ccw else p
+        ext = list(p.exterior.coords)
+        if p.exterior.is_ccw:  # en (x, z-sur) CCW => recorrido horario visto desde arriba
+            ext = ext[::-1]
+        u = 0.0
+        for a in range(len(ext) - 1):
+            shop = shop_edges(ext[a], ext[a + 1]) if shop_edges else 0.0
+            mesh.add_quad(ext[a], ext[a + 1], y0, y1, color, u, (uv2[0], shop))
+            u += math.dist(ext[a], ext[a + 1])
+        for r in p.interiors:
+            ring = list(r.coords)
+            if not r.is_ccw:
+                ring = ring[::-1]
+            for a in range(len(ring) - 1):
+                mesh.add_quad(ring[a], ring[a + 1], y0, y1, color)
+
+
+def hh(s):
+    return int(hashlib.md5(str(s).encode()).hexdigest()[:8], 16)
+
+
+def tint(seed):
+    # paleta de Malé: blancos, cremas, pasteles cálidos, algún celeste/verde agua
+    pal = [(0.95, 0.94, 0.90), (0.93, 0.89, 0.80), (0.96, 0.86, 0.72), (0.88, 0.92, 0.93),
+           (0.82, 0.90, 0.86), (0.95, 0.80, 0.74), (0.90, 0.90, 0.90), (0.98, 0.93, 0.75),
+           (0.80, 0.86, 0.94), (0.92, 0.84, 0.88)]
+    c = pal[hh(seed) % len(pal)]
+    return (c[0], c[1], c[2], 1.0)
+
+
+# ------------------------------------------------------------------ OSM
+def load_osm():
+    js = json.loads((RAW / "osm_male.json").read_text())
+    out = {"coast": [], "islands": [], "buildings": [], "roads": [], "parks": [], "piers": [],
+           "breakwaters": [], "beaches": [], "squares": [], "pitches": [], "marinas": []}
+    for el in js["elements"]:
+        tags = el.get("tags", {})
+        geo = None
+        if el["type"] == "way" and "geometry" in el:
+            pts = [(p["lon"], p["lat"]) for p in el["geometry"]]
+            closed = len(pts) >= 4 and pts[0] == pts[-1]
+            geo = (pts, closed)
+        elif el["type"] == "relation" and tags.get("type") == "multipolygon":
+            outers = [LineString([(p["lon"], p["lat"]) for p in m["geometry"]])
+                      for m in el.get("members", []) if m.get("role") == "outer" and "geometry" in m]
+            polys = list(polygonize(linemerge(outers))) if outers else []
+            if polys:
+                geo = (unary_union(polys), "poly")
+        if geo is None:
+            continue
+        pts, closed = geo
+        item = {"id": el["id"], "tags": tags}
+        if closed == "poly":
+            item["poly_ll"] = pts
+        elif closed:
+            item["poly_ll"] = Polygon(pts).buffer(0)
+        else:
+            item["line_ll"] = LineString(pts)
+        if tags.get("natural") == "coastline":
+            (out["islands"] if "poly_ll" in item else out["coast"]).append(item)
+        elif "building" in tags and "poly_ll" in item:
+            out["buildings"].append(item)
+        elif tags.get("highway") in ROAD_W and "line_ll" in item:
+            out["roads"].append(item)
+        elif tags.get("man_made") == "pier":
+            out["piers"].append(item)
+        elif tags.get("man_made") == "breakwater":
+            out["breakwaters"].append(item)
+        elif tags.get("natural") == "beach" or el["id"] == 602727296:
+            out["beaches"].append(item)
+        elif tags.get("place") == "square" or tags.get("highway") == "pedestrian" and "poly_ll" in item:
+            out["squares"].append(item)
+        elif tags.get("leisure") in ("park", "garden", "common") or tags.get("landuse") == "grass":
+            out["parks"].append(item)
+        elif tags.get("leisure") == "pitch":
+            out["pitches"].append(item)
+        elif tags.get("leisure") == "marina":
+            out["marinas"].append(item)
+    return out
+
+
+def to_local_geom(g, z):
+    def f(x, y, zz=None):
+        e = np.radians(x) * R
+        n = R * np.log(np.tan(np.pi / 4 + np.radians(y) / 2))
+        return ((e - z.e0) / z.k, (z.n0 - n) / z.k)
+    from shapely.ops import transform
+    return transform(f, g)
+
+
+def island_polygon(osm):
+    polys = [it["poly_ll"] for it in osm["islands"]]
+    lines = [it["line_ll"] for it in osm["coast"]]
+    if lines:
+        polys += list(polygonize(linemerge(lines)))
+    # la costa OSM se dibuja con el mar a la derecha: polígonos de tierra
+    land = unary_union([p for p in polys if p.area > 1e-8])
+    return land
+
+
+# ------------------------------------------------------------------ batimetría (L8)
+class L8:
+    def __init__(self):
+        self.cache = {}
+
+    def depth(self, e, n):
+        i, j = tile_of(8, e, n)
+        key = (i, j)
+        if key not in self.cache:
+            t = read_tile(TILES_OUT / f"L8/{i}_{j}.vmt")
+            h = t[0] if isinstance(t, tuple) else t["heights"]
+            self.cache[key] = np.asarray(h, np.float32).reshape(DETAIL_SAMPLES, DETAIL_SAMPLES)
+        a = self.cache[key]
+        oe, on = tile_origin(8, i, j)
+        s = tile_size(8) / (DETAIL_SAMPLES - 1)
+        fx, fy = (e - oe) / s, (on - n) / s
+        x0, y0 = min(int(fx), DETAIL_SAMPLES - 2), min(int(fy), DETAIL_SAMPLES - 2)
+        tx, ty = fx - x0, fy - y0
+        v = (a[y0, x0] * (1 - tx) * (1 - ty) + a[y0, x0 + 1] * tx * (1 - ty)
+             + a[y0 + 1, x0] * (1 - tx) * ty + a[y0 + 1, x0 + 1] * tx * ty)
+        return -float(v)
+
+
+# ------------------------------------------------------------------ generación por zona
+def lots_in_block(block, seed):
+    """Parte una manzana en lotes (~11 x 14 m) alineados al rectángulo mínimo de la manzana."""
+    mrr = block.minimum_rotated_rectangle
+    c = list(mrr.exterior.coords)
+    ang = math.degrees(math.atan2(c[1][1] - c[0][1], c[1][0] - c[0][0]))
+    rb = affinity.rotate(block, -ang, origin=block.centroid)
+    x0, z0, x1, z1 = rb.bounds
+    lw, ld = 10.0 + (seed % 5), 13.0 + (seed // 5 % 4)
+    out = []
+    x = x0
+    while x < x1:
+        z = z0
+        while z < z1:
+            cell = box(x, z, x + lw, z + ld).intersection(rb)
+            if not cell.is_empty and cell.area > 45.0:
+                cell = cell.buffer(-0.4, join_style=2)
+                if not cell.is_empty and cell.area > 35.0:
+                    out.append(affinity.rotate(cell, ang, origin=block.centroid))
+            z += ld
+        x += lw
+    return out
+
+
+def build_zone(z, osm, l8, out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rect = z.rect
+    land_all = to_local_geom(island_polygon(osm), z)
+    land = land_all.intersection(rect)
+    loc = lambda it: to_local_geom(it.get("poly_ll") or it["line_ll"], z)  # noqa: E731
+
+    # calles
+    road_polys, road_info = [], []
+    for it in osm["roads"]:
+        hw = it["tags"]["highway"]
+        g = loc(it)
+        if not g.intersects(rect.buffer(30)):
+            continue
+        w = ROAD_W[hw]
+        road_polys.append(g.buffer(w / 2, cap_style=2, join_style=2))
+        road_info.append((hw, g, w, it["tags"].get("name:en") or it["tags"].get("name", "")))
+    roads = unary_union(road_polys).intersection(land) if road_polys else Polygon()
+    vehic = unary_union([g.buffer(w / 2, cap_style=2, join_style=2) for hw, g, w, _ in road_info
+                         if hw not in ("footway", "path", "pedestrian")]) if road_info else Polygon()
+    sidewalks = vehic.buffer(SIDEWALK_W, join_style=2).difference(vehic).intersection(land)
+    shop_lines = unary_union([g for hw, g, w, _ in road_info if hw in SHOP_ROADS]) if road_info else None
+
+    def lpolys(key):
+        return [(it, loc(it)) for it in osm[key] if loc(it).intersects(rect)]
+
+    parks = unary_union([g for _, g in lpolys("parks") if g.geom_type in ("Polygon", "MultiPolygon")]).intersection(land)
+    squares = unary_union([g for _, g in lpolys("squares") if g.geom_type in ("Polygon", "MultiPolygon")]).intersection(land)
+    pitches = unary_union([g for _, g in lpolys("pitches") if g.geom_type in ("Polygon", "MultiPolygon")]).intersection(land)
+    beaches = unary_union([g for _, g in lpolys("beaches") if g.geom_type in ("Polygon", "MultiPolygon")])
+    beaches = beaches.intersection(rect) if not beaches.is_empty else beaches
+    deck = land.difference(beaches) if not beaches.is_empty else land
+
+    meshes = {k: Mesh() for k in ("deck", "seawall", "road", "sidewalk", "paint", "park", "square",
+                                  "pitch", "beach", "pier", "breakwater", "walls", "roofs", "seabed")}
+    meshes["deck"].add_poly(deck, DECK_Y, 1 / 4)
+    meshes["road"].add_poly(roads.difference(squares), DECK_Y + 0.02, 1 / 6)
+    meshes["sidewalk"].add_poly(sidewalks.difference(squares), DECK_Y + 0.035, 1 / 2)
+    meshes["park"].add_poly(parks.difference(roads), DECK_Y + 0.03, 1 / 4)
+    meshes["square"].add_poly(squares, DECK_Y + 0.04, 1 / 3)
+    meshes["pitch"].add_poly(pitches.difference(roads), DECK_Y + 0.03, 1 / 4, (0.25, 0.55, 0.3, 1))
+
+    # muro de costa: caras verticales del borde de la isla (no en el borde de la zona)
+    coast = land_all.boundary.intersection(rect)
+    for seg in (coast.geoms if hasattr(coast, "geoms") else [coast]):
+        if seg.geom_type != "LineString":
+            continue
+        cs = list(seg.coords)
+        land_side = land_all.exterior.is_ccw if land_all.geom_type == "Polygon" else True
+        for a in range(len(cs) - 1):
+            p0, p1 = cs[a], cs[a + 1]
+            meshes["seawall"].add_quad(p1, p0, SEAWALL_BOTTOM, DECK_Y)  # se arregla la cara en Godot (doble)
+
+    # playa: arena en rampa desde el muelle hasta el agua
+    if not beaches.is_empty:
+        inland = deck.boundary
+
+        def beach_y(x, zz):
+            d = Point(x, zz).distance(inland)
+            return DECK_Y - min(1.0, d / 35.0) * (DECK_Y + 1.6)
+        dense = beaches.segmentize(4.0)
+        meshes["beach"].add_poly(dense, 0.0, 1 / 3, y_fn=beach_y)
+
+    # muelles y escolleras
+    for it, g in lpolys("piers"):
+        poly = g if g.geom_type in ("Polygon", "MultiPolygon") else g.buffer(2.5, cap_style=2)
+        poly = poly.intersection(rect).difference(land)
+        meshes["pier"].add_poly(poly, DECK_Y - 0.3, 1 / 3)
+        walls_of(poly, -1.0, DECK_Y - 0.3, meshes["pier"], (0.8, 0.8, 0.78, 1))
+    for it, g in lpolys("breakwaters"):
+        poly = g if g.geom_type in ("Polygon", "MultiPolygon") else g.buffer(3.0, cap_style=1)
+        poly = poly.intersection(rect).difference(land)
+        meshes["breakwater"].add_poly(poly, 1.2, 1 / 2)
+        walls_of(poly, -1.5, 1.2, meshes["breakwater"], (1, 1, 1, 1))
+
+    # edificios OSM (cada edificio va a la zona de su centroide: no se cortan paredes)
+    blds, landmarks = [], []
+    road_block = roads.buffer(0.3)
+    for it in osm["buildings"]:
+        g = loc(it)
+        if g.is_empty or not rect.contains(g.centroid):
+            continue
+        g = g.buffer(0)
+        if it["id"] in LANDMARKS:
+            landmarks.append({"kind": LANDMARKS[it["id"]], "osm_id": it["id"],
+                              "name": it["tags"].get("name:en") or it["tags"].get("name", ""),
+                              "poly": [list(c) for c in g.exterior.coords] if g.geom_type == "Polygon" else []})
+        t = it["tags"]
+        lv = t.get("building:levels")
+        if "height" in t:
+            try:
+                height = float(str(t["height"]).split()[0])
+            except ValueError:
+                height = None
+        else:
+            height = None
+        if height is None and lv:
+            try:
+                height = float(lv) * FLOOR_H + 1.0
+            except ValueError:
+                height = None
+        if height is None:
+            height = (3 + hh(it["id"]) % 6) * FLOOR_H + 1.0
+        if LANDMARKS.get(it["id"]) == "hukuru_miskiy":
+            height = 5.5
+        elif LANDMARKS.get(it["id"]) == "islamic_centre":
+            height = 14.0
+        blds.append({"poly": g, "h": height, "seed": it["id"], "procedural": False,
+                     "kind": LANDMARKS.get(it["id"], "building")})
+    for it in osm["squares"] + osm["beaches"]:
+        if it["id"] in LANDMARKS and "poly_ll" in it:
+            g = loc(it)
+            if rect.contains(g.centroid):
+                landmarks.append({"kind": LANDMARKS[it["id"]], "osm_id": it["id"],
+                                  "name": it["tags"].get("name:en") or it["tags"].get("name", ""),
+                                  "poly": [list(c) for c in g.exterior.coords] if g.geom_type == "Polygon" else []})
+
+    # relleno procedural de manzanas sin edificios en OSM
+    osm_b = unary_union([b["poly"].buffer(1.0) for b in blds]) if blds else Polygon()
+    free = deck.difference(roads.buffer(SIDEWALK_W + 0.5)).difference(parks).difference(squares)
+    free = free.difference(pitches).difference(osm_b).buffer(-1.0).buffer(0.5)
+    n_proc = 0
+    for blk in (free.geoms if hasattr(free, "geoms") else [free]):
+        if blk.geom_type != "Polygon" or blk.area < 80:
+            continue
+        for lot in lots_in_block(blk, hh(round(blk.centroid.x)) % 40):
+            if lot.geom_type != "Polygon" or not rect.contains(lot.centroid):
+                continue
+            s = hh((round(lot.centroid.x, 1), round(lot.centroid.y, 1)))
+            floors = 3 + s % 7
+            blds.append({"poly": lot, "h": floors * FLOOR_H + 1.0, "seed": s, "procedural": True,
+                         "kind": "building"})
+            n_proc += 1
+
+    def shop_edges_for(height):
+        def f(p0, p1):
+            if shop_lines is None or shop_lines.is_empty:
+                return 0.0
+            mid = Point((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)
+            return 1.0 if mid.distance(shop_lines) < 12.0 and math.dist(p0, p1) > 4.0 else 0.0
+        return f
+
+    ad_slots = []
+    for b in blds:
+        g, h = b["poly"], b["h"]
+        y1 = DECK_Y + h
+        col = (0.78, 0.66, 0.5, 1) if b["kind"] == "hukuru_miskiy" else tint(b["seed"])
+        style = 1.0 if b["kind"] == "hukuru_miskiy" else 0.0
+        if b["kind"] in ("building",):
+            walls_of(g, DECK_Y - 0.2, y1, meshes["walls"], col, (style, 0.0), shop_edges_for(h))
+        else:
+            walls_of(g, DECK_Y - 0.2, y1, meshes["walls"], col, (style, 0.0))
+        meshes["roofs"].add_poly(g, y1, 1 / 4)
+        # cartel publicitario: una cara mirando a una calle comercial, bajo la primera losa
+        if b["kind"] == "building" and shop_lines is not None and not shop_lines.is_empty:
+            ext = list(g.exterior.coords) if g.geom_type == "Polygon" else []
+            if ext and not g.exterior.is_ccw:
+                pass
+            best = None
+            for a in range(len(ext) - 1):
+                p0, p1 = ext[a], ext[a + 1]
+                L = math.dist(p0, p1)
+                mid = ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)
+                d = Point(mid).distance(shop_lines)
+                if L >= 6.0 and d < 12.0 and (best is None or d < best[0]):
+                    best = (d, p0, p1, L)
+            if best is not None and len(ad_slots) < 400:
+                d, p0, p1, L = best
+                # normal hacia afuera del edificio
+                mx, mz = (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+                nx, nz = (p1[1] - p0[1]) / L, -(p1[0] - p0[0]) / L
+                if g.contains(Point(mx + nx * 0.5, mz + nz * 0.5)):
+                    nx, nz = -nx, -nz
+                ad_slots.append({"id": f"{z.id}_ad_{len(ad_slots):03d}", "pos": [mx + nx * 0.08, DECK_Y + 3.6, mz + nz * 0.08],
+                                 "normal": [nx, 0.0, nz], "size": [min(L - 1.0, 6.0), 1.2]})
+
+    # pasos de cebra: en cruces de calles vehiculares (franjas blancas)
+    nodes = {}
+    for hw, g, w, _ in road_info:
+        if hw in ("footway", "path", "pedestrian", "service"):
+            continue
+        for c in (g.coords[0], g.coords[-1]):
+            nodes.setdefault((round(c[0], 1), round(c[1], 1)), []).append((g, w))
+    n_cross = 0
+    for (x, zz), lst in nodes.items():
+        if len(lst) < 3 or not rect.contains(Point(x, zz)) or not land.contains(Point(x, zz)):
+            continue
+        for g, w in lst:
+            # franja a 3 m del cruce, a lo largo de cada brazo
+            d0 = 0.0 if Point(g.coords[0]).distance(Point(x, zz)) < 0.5 else g.length
+            off = w / 2 + 1.5
+            pt = g.interpolate(off if d0 == 0.0 else g.length - off)
+            pn = g.interpolate(off + 0.5 if d0 == 0.0 else g.length - off - 0.5)
+            dx, dz = pn.x - pt.x, pn.y - pt.y
+            L = math.hypot(dx, dz)
+            if L < 1e-3:
+                continue
+            dx, dz = dx / L, dz / L
+            px, pz = -dz, dx
+            for s in range(-int(w / 1.2), int(w / 1.2) + 1):
+                cx, cz = pt.x + px * s * 0.6, pt.y + pz * s * 0.6
+                stripe = Polygon([(cx - px * 0.2 - dx * 1.4, cz - pz * 0.2 - dz * 1.4),
+                                  (cx + px * 0.2 - dx * 1.4, cz + pz * 0.2 - dz * 1.4),
+                                  (cx + px * 0.2 + dx * 1.4, cz + pz * 0.2 + dz * 1.4),
+                                  (cx - px * 0.2 + dx * 1.4, cz - pz * 0.2 + dz * 1.4)])
+                stripe = stripe.intersection(vehic)
+                meshes["paint"].add_poly(stripe, DECK_Y + 0.03)
+            n_cross += 1
+
+    # agua y lecho marino de la zona (reemplazan a L8 dentro del rectángulo)
+    N = 192
+    depth = np.zeros((N, N), np.float32)
+    sea = rect.difference(land_all)
+    edge = rect.exterior
+    coast_line = land_all.boundary
+    for r in range(N):
+        for c in range(N):
+            x, zz = c / (N - 1) * z.w, r / (N - 1) * z.h
+            p = Point(x, zz)
+            if land_all.contains(p) and not beaches.contains(p):
+                depth[r, c] = -1.0
+                continue
+            dl8 = max(l8.depth(z.e0 + x * z.k, z.n0 - zz * z.k), 1.0)
+            dc = p.distance(coast_line)
+            model = min(dl8, 1.0 + dc * 0.06)
+            if beaches.contains(p):
+                model = -0.2
+            we = max(0.0, 1.0 - p.distance(edge) / 250.0)
+            depth[r, c] = model * (1 - we) + dl8 * we
+    depth.astype(np.float32).tofile(out_dir / "depth.f32")
+    # lecho: grilla 48x48 con la misma profundidad (escalada por k como L8: y = -d)
+    G = 64
+    for r in range(G - 1):
+        for c in range(G - 1):
+            quad = []
+            for (rr, cc) in ((r, c), (r, c + 1), (r + 1, c + 1), (r + 1, c)):
+                x, zz = cc / (G - 1) * z.w, rr / (G - 1) * z.h
+                d = depth[min(N - 1, round(rr / (G - 1) * (N - 1))), min(N - 1, round(cc / (G - 1) * (N - 1)))]
+                quad.append((x, -max(d, 0.5) if d > -0.5 else -0.5, zz))
+            v = [quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]]
+            meshes["seabed"].add_tri_list(v, [(0, 1, 0)] * 6)
+
+    stats = {}
+    for name, m in meshes.items():
+        if m.i:
+            stats[name] = m.write(out_dir / f"{name}.vmm")
+    # recorrido de prueba: por Majeedhee Magu (la avenida principal este-oeste)
+    meta = {
+        "id": z.id, "name": z.name, "size": [z.w, z.h], "deck_y": DECK_Y, "k": z.k,
+        "origin_global": [z.e0, z.n0], "depth_n": N, "landmarks": landmarks, "ad_slots": ad_slots,
+        "stats": {"buildings_osm": sum(1 for b in blds if not b["procedural"]),
+                  "buildings_procedural": n_proc, "crossings": n_cross, "ad_slots": len(ad_slots),
+                  "meshes": stats},
+        "palms": palm_points(parks, squares, sidewalks, road_info, z),
+        "streets": [{"name": nm, "kind": hw, "pts": [list(c) for c in g.coords]}
+                    for hw, g, w, nm in road_info if nm and hw in SHOP_ROADS],
+    }
+    (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False))
+    print(z.id, json.dumps(meta["stats"]))
+    return meta
+
+
+def palm_points(parks, squares, sidewalks, road_info, z):
+    pts = []
+    for p in (parks.geoms if hasattr(parks, "geoms") else [parks]):
+        if p.is_empty or p.geom_type != "Polygon":
+            continue
+        x0, y0, x1, y1 = p.bounds
+        step = 9.0
+        x = x0
+        while x < x1:
+            y = y0
+            while y < y1:
+                s = hh((round(x), round(y)))
+                q = Point(x + (s % 50) / 10.0, y + (s // 50 % 50) / 10.0)
+                if p.buffer(-1.5).contains(q):
+                    pts.append([q.x, q.y, (s % 360), 0.85 + (s % 30) / 100.0])
+                y += step
+            x += step
+    return pts[:900]
+
+
+def main():
+    if "--fetch" in sys.argv or not (RAW / "osm_male.json").exists():
+        fetch_male()
+    osm = load_osm()
+    print("OSM Malé:", {k: len(v) for k, v in osm.items()})
+    _, nmid = lonlat_to_global(73.515, 4.177)
+    k = k_at(nmid)
+    l8 = L8()
+    metas = []
+    for spec in (ZONE_W, ZONE_E):
+        z = Zone(spec, k)
+        metas.append(build_zone(z, osm, l8, REPO / "data" / "sites" / z.id))
+    # recorrido de prueba: Majeedhee Magu cruzando el borde oeste/este (-70 m .. +50 m)
+    mj = linemerge([it["line_ll"] for it in osm["roads"] if it["tags"].get("name") == "Majeedhee Magu"
+                    or it["tags"].get("name:en") == "Majeedhee Magu"])
+    zg = Zone(ZONE_W, k)
+    lines = mj.geoms if hasattr(mj, "geoms") else [mj]
+    border_x = zg.w
+    walk = None
+    for ln in lines:
+        lg = to_local_geom(ln, zg)
+        if lg.bounds[0] < border_x < lg.bounds[2]:
+            cut = lg.intersection(LineString([(border_x, -1e4), (border_x, 1e4)]))
+            if cut.is_empty:
+                continue
+            p0 = cut if cut.geom_type == "Point" else list(cut.geoms)[0]
+            s0 = lg.project(p0)
+            pts = [lg.interpolate(s0 + d) for d in range(-70, 55, 5)]
+            if pts[0].x > pts[-1].x:
+                pts = [lg.interpolate(s0 - d) for d in range(-70, 55, 5)]
+            walk = [[zg.e0 + p.x * k, zg.n0 - p.y * k] for p in pts]
+            break
+    # métricas de lo caminable (isla completa, ambas zonas)
+    land_ll = island_polygon(osm)
+    zl = Zone((None, None, 73.4975, 4.1880, 73.5320, 4.1655), k)
+    land_all_l = to_local_geom(land_ll, zl).intersection(zl.rect)
+    # solo la isla de Malé (el rectángulo también toca Funadhoo y la punta de Hulhulé)
+    mp = zl.to_local(73.510, 4.175)
+    parts = land_all_l.geoms if hasattr(land_all_l, "geoms") else [land_all_l]
+    land_l = next((g for g in parts if g.buffer(30).contains(Point(mp))), land_all_l)
+    road_len = 0.0
+    road_polys = []
+    for it in osm["roads"]:
+        g = to_local_geom(it["line_ll"], zl)
+        gi = g.intersection(land_l.buffer(15))
+        road_len += gi.length
+        road_polys.append(g.buffer(ROAD_W[it["tags"]["highway"]] / 2 + SIDEWALK_W, cap_style=2))
+    streets_area = unary_union(road_polys).intersection(land_l).area
+    beach_a = sum(to_local_geom(it["poly_ll"], zl).intersection(zl.rect).area for it in osm["beaches"] if "poly_ll" in it)
+    pier_a = sum(to_local_geom(it["poly_ll"], zl).difference(land_l).intersection(land_l.buffer(400)).area
+                 for it in osm["piers"] if "poly_ll" in it)
+    metrics = {"street_length_km": round(road_len / 1000, 2), "street_area_km2": round(streets_area / 1e6, 3),
+               "walkable_ground_km2": round((land_l.area + pier_a) / 1e6, 3),
+               "beach_area_m2": round(beach_a), "pier_area_m2": round(pier_a),
+               "island_bbox_m": [round(x) for x in land_l.bounds]}
+    print("métricas:", metrics)
+    (REPO / "data" / "sites" / "male_metrics.json").write_text(json.dumps(metrics, indent=1))
+    (REPO / "data" / "sites" / "male_test_walk.json").write_text(json.dumps({"street": "Majeedhee Magu", "points": walk}))
+    (REPO / "data" / "sites" / "male_zones.json").write_text(json.dumps(
+        [{"id": m["id"], "name": m["name"], "origin": m["origin_global"], "size_local": m["size"], "k": m["k"]}
+         for m in metas], indent=1))
+
+
+if __name__ == "__main__":
+    main()

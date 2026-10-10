@@ -14,6 +14,8 @@ var size_e: float = 0.0
 var size_n: float = 0.0
 var neighbors: PackedStringArray = PackedStringArray()
 var landing: GlobalPos = null
+## Recorrido de prueba (pares [e, n] globales), si la zona lo trae.
+var test_walk: Array = []
 var scene: String = ""
 var available: bool = false
 ## Escala uniforme aplicada a la escena (metros globales por metro real), fija por país.
@@ -33,6 +35,7 @@ static func from_dict(d: Dictionary) -> ZoneInfo:
 	z.size_e = float(s[0])
 	z.size_n = float(s[1])
 	z.neighbors = PackedStringArray(d.get("neighbors", []))
+	z.test_walk = d.get("test_walk", [])
 	var lp: Variant = d.get("landing", null)
 	if lp is Array and (lp as Array).size() >= 3:
 		z.landing = GlobalPos.new(float(lp[0]), float(lp[1]), float(lp[2]))

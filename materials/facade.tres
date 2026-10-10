@@ -1,0 +1,23 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://shaders/facade.gdshader" id="1_pa3ue"]
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_diff.jpg" id="2_6irmc"]
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_nor_gl.jpg" id="3_bmim8"]
+[ext_resource type="Texture2D" path="res://assets/textures/coral_stone_wall/coral_stone_wall_arm.jpg" id="4_fxibx"]
+[ext_resource type="Texture2D" path="res://assets/textures/white_stucco/white_stucco_diff.jpg" id="5_7e2wm"]
+[ext_resource type="Texture2D" path="res://assets/textures/white_stucco/white_stucco_nor_gl.jpg" id="6_42uke"]
+[ext_resource type="Texture2D" path="res://assets/textures/white_stucco/white_stucco_arm.jpg" id="7_7i65p"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_pa3ue")
+shader_parameter/plaster_albedo = ExtResource("5_7e2wm")
+shader_parameter/plaster_normal = ExtResource("6_42uke")
+shader_parameter/plaster_orm = ExtResource("7_7i65p")
+shader_parameter/coral_albedo = ExtResource("2_6irmc")
+shader_parameter/coral_normal = ExtResource("3_bmim8")
+shader_parameter/coral_orm = ExtResource("4_fxibx")
+shader_parameter/deck_y = null
+shader_parameter/floor_h = null
+shader_parameter/tex_scale = null
+shader_parameter/window_detail = null

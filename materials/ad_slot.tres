@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/generated/ad_placeholder.png" id="1_bajm6"]
+
+[resource]
+albedo_texture = ExtResource("1_bajm6")
+roughness = 0.5
+emission_enabled = true
+emission_energy_multiplier = 0.35
+emission_texture = ExtResource("1_bajm6")

@@ -9,6 +9,20 @@ render_mode blend_mix, cull_disabled, depth_draw_opaque, specular_schlick_ggx;
 
 global uniform vec2 world_origin_mod;
 
+// Recorte del conector bajo los micro-mapas cargados (ellos traen su propio suelo/agua).
+// site_cut_* = (x0, z0, x1, z1) en coordenadas locales del mundo; x1 <= x0 = sin recorte.
+global uniform vec4 site_cut_a;
+global uniform vec4 site_cut_b;
+
+bool in_cut(vec2 p) {
+	bool a = site_cut_a.z > site_cut_a.x && p.x > site_cut_a.x && p.x < site_cut_a.z && p.y > site_cut_a.y
+			&& p.y < site_cut_a.w;
+	bool b = site_cut_b.z > site_cut_b.x && p.x > site_cut_b.x && p.x < site_cut_b.z && p.y > site_cut_b.y
+			&& p.y < site_cut_b.w;
+	return a || b;
+}
+uniform bool use_cut = true;
+
 uniform sampler2D depth_tex : filter_linear, repeat_disable;
 uniform float tex_n = 65.0;
 uniform float abs_lat = 10.0;
@@ -19,7 +33,8 @@ uniform float time_scale = 1.0;
 const float P = 8192.0;
 const float TAU_ = 6.28318530718;
 
-varying vec2 g;        // coordenada global periódica (x este, y sur)
+varying vec2 g;
+varying vec2 wxz;        // coordenada global periódica (x este, y sur)
 varying vec2 uv_d;
 varying float view_dist;
 
@@ -31,6 +46,7 @@ void vertex() {
 	uv_d = (UV * (tex_n - 1.0) + 0.5) / tex_n;
 	vec3 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	g = wp.xz + world_origin_mod;
+	wxz = wp.xz;
 	view_dist = length((MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz);
 }
 
@@ -44,7 +60,7 @@ vec3 wave(vec2 p, vec2 ab, float amp, float speed, float t) {
 
 void fragment() {
 	float d = texture(depth_tex, uv_d).r;
-	if (d < -0.6) {
+	if (d < -0.6 || (use_cut && in_cut(wxz))) {
 		discard;
 	}
 	float t = TIME * time_scale;

@@ -8,8 +8,8 @@ var b: ZoneInfo
 
 func before_all() -> void:
 	idx = ZoneIndex.load_from("res://data/zone_index.json")
-	a = idx.get_zone("mv_test_male_oeste")
-	b = idx.get_zone("mv_test_male_este")
+	a = idx.get_zone("mv_male_oeste")
+	b = idx.get_zone("mv_male_este")
 
 
 func test_band_widens_with_speed() -> void:

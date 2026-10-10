@@ -1,0 +1,13 @@
+{
+ "street_length_km": 66.41,
+ "street_area_km2": 0.547,
+ "walkable_ground_km2": 2.077,
+ "beach_area_m2": 9531,
+ "pier_area_m2": 877,
+ "island_bbox_m": [
+  331,
+  772,
+  2434,
+  2193
+ ]
+}

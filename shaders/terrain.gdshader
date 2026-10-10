@@ -6,9 +6,23 @@ render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
 
 instance uniform float abs_lat = 10.0;
 
+// Recorte del conector bajo los micro-mapas cargados (ellos traen su propio suelo/agua).
+// site_cut_* = (x0, z0, x1, z1) en coordenadas locales del mundo; x1 <= x0 = sin recorte.
+global uniform vec4 site_cut_a;
+global uniform vec4 site_cut_b;
+
+bool in_cut(vec2 p) {
+	bool a = site_cut_a.z > site_cut_a.x && p.x > site_cut_a.x && p.x < site_cut_a.z && p.y > site_cut_a.y
+			&& p.y < site_cut_a.w;
+	bool b = site_cut_b.z > site_cut_b.x && p.x > site_cut_b.x && p.x < site_cut_b.z && p.y > site_cut_b.y
+			&& p.y < site_cut_b.w;
+	return a || b;
+}
+
 varying float h_real;
 varying float land;
 varying vec3 n_world;
+varying vec2 wxz;
 
 vec3 srgb(vec3 c) {
 	return pow(c, vec3(2.2));
@@ -18,6 +32,7 @@ void vertex() {
 	h_real = UV2.x;
 	land = UV2.y;
 	n_world = NORMAL;
+	wxz = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
 }
 
 vec3 land_color(float h, float slope, float lat) {
@@ -46,6 +61,9 @@ vec3 seabed_color(float depth) {
 }
 
 void fragment() {
+	if (in_cut(wxz)) {
+		discard;
+	}
 	float slope = 1.0 - clamp(normalize(n_world).y, 0.0, 1.0);
 	float is_land = max(step(0.5, land), step(0.5, h_real));
 	vec3 c = mix(seabed_color(max(-h_real, 0.0)), land_color(h_real, slope, abs_lat), is_land);

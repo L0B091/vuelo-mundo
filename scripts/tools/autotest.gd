@@ -31,6 +31,7 @@ var report: Dictionary = {
 var _last_y: float = NAN
 var _walk_start: GlobalPos
 var _dbg_t: float = 0.0
+var _wp: int = 1
 
 
 func _ready() -> void:
@@ -39,7 +40,7 @@ func _ready() -> void:
 
 func _begin() -> void:
 	var a: Avatar = main.avatar
-	var za: ZoneInfo = main.index.get_zone("mv_test_male_oeste")
+	var za: ZoneInfo = main.index.get_zone("mv_male_oeste")
 	target = za.landing
 	a.message.connect(func(m: String) -> void: print("[avatar] ", m))
 	# fase 1: arranca al oeste de la región de detalle, en turbo, rumbo este
@@ -115,6 +116,14 @@ func _physics_process(dt: float) -> void:
 			elif t > 30.0:
 				_finish("no tocó el suelo")
 		"caminata":
+			# sigue la calle real (Majeedhee Magu) por sus puntos, cruzando el borde oeste/este
+			var wpts: Array = main.index.get_zone("mv_male_oeste").test_walk
+			while _wp < wpts.size() and gp.horizontal_distance_to(GlobalPos.new(wpts[_wp][0], wpts[_wp][1], 0.0)) < 3.0:
+				_wp += 1
+			if _wp < wpts.size():
+				var tdx: float = Geo.delta_e(float(wpts[_wp][0]), gp.e)
+				var tdn: float = float(wpts[_wp][1]) - gp.n
+				a.heading_deg = fposmod(rad_to_deg(atan2(tdx, tdn)), 360.0)
 			a.pilot_stick = Vector2(0, 1)
 			if not is_nan(_last_y):
 				report.max_step_y = maxf(report.max_step_y, absf(a.position.y - _last_y))
@@ -122,7 +131,7 @@ func _physics_process(dt: float) -> void:
 			if a.state != Avatar.State.WALK:
 				_finish("perdió el suelo al caminar")
 				return
-			if main.zones.current_id == "mv_test_male_este":
+			if main.zones.current_id == "mv_male_este":
 				report.walk_cross_ok = main.zones.stats.late_crossings == 0
 				report["walked_m"] = snappedf(a.global_pos().horizontal_distance_to(_walk_start), 0.01)
 				a.pilot_stick = Vector2.ZERO

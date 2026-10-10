@@ -15,8 +15,13 @@ var index: ZoneIndex
 var live: Dictionary = {}  # id -> {state, node, requested_ms, request}
 var current_id: String = ""
 var stats: Dictionary = {"requests": 0, "loaded": 0, "unloaded": 0, "late_crossings": 0, "last_request": {}}
+## ¿El avatar está dentro de un micro-mapa listo? (el conector se recorta y no colisiona)
+var inside_ready_site: bool = false
 ## El punto de aparición no cuenta como cruce (no se llegó volando).
 var _first_update: bool = true
+## Cuerpos de colisión de zonas recién cargadas, pendientes de agregar al árbol (Jolt arma
+## cada malla de colisión en el hilo principal: se reparten entre cuadros, la más cercana primero).
+var _pending_cols: Array = []  # [id, StaticBody3D, Node3D padre]
 
 
 func setup(p_world: WorldRoot, p_index: ZoneIndex) -> void:
@@ -32,6 +37,8 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 		if not live.has(id):
 			_request(index.get_zone(id), gp, heading)
 	_poll()
+	_add_pending_collisions(gp, 2500)
+	_update_cuts(gp)
 	# cruce: ¿entramos a una zona? ¿estaba lista?
 	var cur := index.zone_at(gp.e, gp.n, "site")
 	var cid := cur.id if cur != null else ""
@@ -87,6 +94,11 @@ func _poll() -> void:
 			var ps: PackedScene = ResourceLoader.load_threaded_get(z.scene)
 			var node: Node3D = ps.instantiate()
 			node.name = "Zona_" + id
+			var cols := node.get_node_or_null(^"Colisiones")
+			if cols != null:
+				for b: Node in cols.get_children():
+					cols.remove_child(b)
+					_pending_cols.append([id, b, cols])
 			node.scale = Vector3.ONE * z.local_scale
 			world.add_child(node)
 			world.place(node, z.origin_e, z.origin_n, 0.0)
@@ -106,9 +118,56 @@ func _unload(id: String) -> void:
 		return  # se descarta cuando termine; evitar abortar a mitad de carga
 	if rec.node != null:
 		(rec.node as Node).queue_free()
+	for k in range(_pending_cols.size() - 1, -1, -1):
+		if _pending_cols[k][0] == id:
+			(_pending_cols[k][1] as Node).free()
+			_pending_cols.remove_at(k)
 	live.erase(id)
 	stats.unloaded += 1
 	zone_unloaded.emit(id)
+
+
+func _add_pending_collisions(gp: GlobalPos, budget_usec: int) -> void:
+	if _pending_cols.is_empty():
+		return
+	var t0 := Time.get_ticks_usec()
+	var here := world.global_to_local(gp.e, gp.n)
+	while not _pending_cols.is_empty() and Time.get_ticks_usec() - t0 < budget_usec:
+		var best := 0
+		var best_d := INF
+		for k in _pending_cols.size():
+			var parent: Node3D = _pending_cols[k][2]
+			var b: Node3D = _pending_cols[k][1]
+			var c: Vector3 = parent.global_transform * (b.get_meta(&"center", Vector3.ZERO) as Vector3)
+			var d := Vector2(c.x - here.x, c.z - here.z).length()
+			if d < best_d:
+				best_d = d
+				best = k
+		var item: Array = _pending_cols[best]
+		_pending_cols.remove_at(best)
+		(item[2] as Node).add_child(item[1])
+
+
+## Colisiones pendientes (0 = la zona ya es completamente sólida).
+func pending_collisions() -> int:
+	return _pending_cols.size()
+
+
+func _update_cuts(gp: GlobalPos) -> void:
+	var rects: Array[Vector4] = []
+	inside_ready_site = false
+	for id: String in live:
+		if live[id].state != "ready":
+			continue
+		var z := index.get_zone(id)
+		var o := world.global_to_local(z.origin_e, z.origin_n)
+		rects.append(Vector4(o.x, o.z, o.x + z.size_e, o.z + z.size_n))
+		if z.contains(gp.e, gp.n):
+			inside_ready_site = true
+	while rects.size() < 2:
+		rects.append(Vector4.ZERO)
+	RenderingServer.global_shader_parameter_set(&"site_cut_a", rects[0])
+	RenderingServer.global_shader_parameter_set(&"site_cut_b", rects[1])
 
 
 func live_ids() -> PackedStringArray:

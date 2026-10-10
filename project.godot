@@ -32,6 +32,7 @@ pointing/emulate_touch_from_mouse=true
 3d_physics/layer_1="terreno"
 3d_physics/layer_2="caminable"
 3d_physics/layer_3="avatar"
+3d_physics/layer_4="edificios"
 
 [physics]
 
@@ -50,4 +51,12 @@ anti_aliasing/quality/msaa_3d=1
 world_origin_mod={
 "type": "vec2",
 "value": Vector2(0, 0)
+}
+site_cut_a={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+site_cut_b={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
 }
