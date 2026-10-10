@@ -187,8 +187,28 @@ al caminar o si las zonas no se descargan.
 cd pipeline
 python3 fetch_sources.py      # descarga ETOPO 2022 60"/15", Natural Earth 10m, OSM Maldivas
 python3 make_zone_index.py    # data/zone_index.json
-python3 bake_tiles.py         # data/tiles/L6 (planeta) + L8 (Maldivas) + vistas previas
+python3 fetch_aca.py          # Allen Coral Atlas (geomorfología, CC BY 4.0) por WFS público
+python3 bake_tiles.py         # data/tiles/L6 (planeta) + L8 (Maldivas, con lagunas corregidas)
+python3 fetch_assets.py       # texturas PBR + HDRI CC0 de Poly Haven -> assets/
+python3 make_generated_textures.py  # palmera, bandera, cartel publicitario (obra propia)
+python3 make_male.py          # Malé desde OSM -> data/sites/ (capas intermedias, no versionadas)
+python3 make_zone_index.py
+cd .. && godot --headless --script res://tools/gen_male.gd   # -> scenes/zones/mv_male_*.scn
 ```
+
+### Malé real
+
+La isla entera es caminable, en dos zonas (`mv_male_oeste` / `mv_male_este`, borde común en
+73.515° E). Sale de OpenStreetMap: todas las calles y callejones con veredas, cebras en los
+cruces, muro de costa, Playa Artificial, muelles, escolleras, edificios OSM (981) y, donde OSM
+no tiene edificios cargados, lotes procedurales dentro de las manzanas reales (6860, marcados
+como procedurales en `meta.json`). Hitos: Centro Islámico (cúpula dorada y alminar, diseño
+propio), Hukuru Miskiy (piedra de coral), Plaza de la República con la bandera. Métricas en
+`data/sites/male_metrics.json` (66 km de vías OSM, 2,08 km² de suelo caminable).
+
+**Carteles publicitarios:** 648 `AdSlot` en fachadas de locales sobre calles comerciales,
+con id estable (`data/ad_slots.json`) y textura intercambiable:
+`AdSlot.assign(get_tree(), "mv_male_oeste_ad_000", textura)`.
 
 Los datos crudos (~520 MB) van a `../vuelo-mundo-data/raw` y no se versionan (podés
 cambiar la ruta con `VM_RAW` y `VM_WORK`). Las teselas horneadas (~31 MB) sí están en el
@@ -212,13 +232,18 @@ El APK se exporta sin errores, pero **todavía no se probó en un teléfono real
 
 ## Pendiente / problemas conocidos
 
-- **Micro-mapas reales:** los de Malé son bancos de prueba genéricos. Faltan los sitios
-  reales de Maldivas (trazado de OSM: calles, veredas, frentes, muelles) y después los
-  monumentos (Coliseo, Torre Eiffel) a escala real.
-- **Batimetría de lagunas:** ETOPO/GEBCO marca las lagunas de los atolones de Maldivas con
-  5 a 15 m, cuando en la realidad tienen 30 a 60 m, así que se ven más claras que en la
-  realidad. Hay que sumar una fuente abierta más fina (por ejemplo la geomorfología del
-  Allen Coral Atlas, CC BY 4.0).
+- **Malé: aspecto.** Es reconocible por el trazado, los hitos y la densidad, pero está lejos
+  de la calidad de un juego comercial: edificios como prismas con ventanas procedurales (sin
+  balcones, aleros, cables, vehículos, gente), sin iluminación horneada (LightmapGI no se
+  horneó: necesita GPU), sin modelos reales de los hitos. Las alturas son inventadas donde OSM
+  no las tiene (casi siempre). Faltan postes de luz, señales y mobiliario.
+- **Lotes procedurales:** OSM tiene ~1000 edificios en Malé; el resto se rellena. Puede haber
+  edificios encima de pasajes que OSM no tiene mapeados.
+- **Lagunas:** corregidas con el Allen Coral Atlas + profundidades publicadas (modelo, no
+  sondeos: el fondo es una rampa suave hasta 50-80 m según la latitud). A 611 m por muestra
+  los faros chicos quedan como manchas.
+- **Agua de Malé vs. conector:** dentro del rectángulo de las zonas el agua es propia; en el
+  borde puede verse una línea de color.
 - **Escala Mercator:** `k` varía con la latitud. El avatar y las escenas la compensan,
   pero el conector tosco cerca de los polos (más de 75°) se ve estirado y no hay vuelo por
   encima de 85°.
@@ -228,11 +253,12 @@ El APK se exporta sin errores, pero **todavía no se probó en un teléfono real
 - El color del terreno sale de la altura, la pendiente y la latitud: todavía no hay
   cobertura del suelo real.
 - No hay controles de cámara libre en vuelo más allá de mirar arrastrando; no hay sonido.
-- **Tirón al cambiar tosco ↔ detalle:** cuando se muestran las 16 teselas L8 y se oculta
-  la L6 (o al revés), ese cuadro tarda ~20–55 ms en headless (sobre todo por habilitar y
-  deshabilitar las colisiones heightfield). No deja huecos, pero puede notarse como un
-  tirón. El próximo paso es repartir el cambio en varios cuadros. En la prueba headless
-  también apareció algún cuadro aislado de ~150 ms que todavía no está explicado.
+- **Rendimiento de streaming:** el cambio tosco↔detalle ya no tira (peor cuadro de cambio
+  6,9 ms en headless; la prueba automática lo afirma, < 33 ms). Las tareas en hilo se limitan
+  por perfil y la colisión se arma con presupuesto por cuadro. Quedan ~1 de cada 10 000
+  actualizaciones de 10-16 ms en secciones triviales: en la máquina de pruebas lo atribuyo al
+  SO/VM, sin confirmar en un teléfono. Shaders: Godot 4.7 precompila pipelines (ubershaders);
+  no hay paso extra de precalentamiento.
 - Al caminar se mide una variación vertical de hasta ~8 mm por paso físico (asentamiento
   de la cápsula). Está por debajo del umbral de escalón de 5 cm.
 - Falta medir rendimiento en equipos reales y ajustar la tabla de dispositivos.

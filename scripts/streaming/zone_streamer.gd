@@ -97,6 +97,7 @@ func _poll() -> void:
 			var cols := node.get_node_or_null(^"Colisiones")
 			if cols != null:
 				for b: Node in cols.get_children():
+					b.owner = null
 					cols.remove_child(b)
 					_pending_cols.append([id, b, cols])
 			node.scale = Vector3.ONE * z.local_scale

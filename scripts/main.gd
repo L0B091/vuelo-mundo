@@ -197,6 +197,10 @@ func _handle_cli(_dt: float) -> void:
 		get_tree().quit()
 	if args.has("screenshot"):
 		var zones_idle := zones.pending_collisions() == 0
+		var here := avatar.global_pos()
+		var site_here: ZoneInfo = index.zone_at(here.e, here.n, "site")
+		if site_here != null and site_here.available and not zones.is_ready(site_here.id):
+			zones_idle = false
 		for id: String in zones.live:
 			if zones.live[id].state == "loading":
 				zones_idle = false
