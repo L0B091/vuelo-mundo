@@ -25,10 +25,12 @@ TEXTURES = {
     "sparse_grass": "canteros y plazas verdes",
     "patterned_paving": "Plaza de la República",
     "corrugated_iron_02": "techos de chapa",
+    "wood_floor_deck": "muelles de madera y terrazas de villas sobre el agua (resort)",
+    "thatch_roof_angled": "techos de paja de villas y pabellones (resort)",
+    "white_planks_clean": "paredes de madera de villas (resort)",
 }
 # modelos (glTF 1k): mobiliario urbano de Malé
 MODELS = {
-    "street_lamp_02": "farolas a lo largo de las calles",
     "metal_trash_can": "cestos de basura en veredas y plazas",
     "painted_wooden_bench": "bancos en parques y en el malecón",
     "plastic_monobloc_chair_01": "sillas de plástico frente a cafés",

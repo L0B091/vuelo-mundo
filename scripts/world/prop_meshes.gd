@@ -78,6 +78,19 @@ static func scooter() -> ArrayMesh:
 	return _commit(st, _mat(0.35, 0.1))
 
 
+## Poste de alumbrado de calle (6.5 m, brazo y luminaria LED), como los de Malé.
+static func street_light() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var g := Color(0.42, 0.44, 0.46)
+	_cyl(st, 0.09, 6.5, Vector3(0, 3.25, 0), g, Basis.IDENTITY, 8)
+	_cyl(st, 0.14, 0.6, Vector3(0, 0.3, 0), g, Basis.IDENTITY, 8)
+	_box(st, Vector3(0.07, 0.07, 1.5), Vector3(0, 6.4, 0.72), g)
+	_box(st, Vector3(0.3, 0.1, 0.6), Vector3(0, 6.38, 1.45), g)
+	_box(st, Vector3(0.24, 0.02, 0.5), Vector3(0, 6.32, 1.45), Color(1.0, 0.97, 0.88))
+	return _commit(st, _mat(0.45, 0.6))
+
+
 ## Auto chico / pickup (escala 1.25 = pickup o camioneta).
 static func car() -> ArrayMesh:
 	var st := SurfaceTool.new()

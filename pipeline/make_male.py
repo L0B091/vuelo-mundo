@@ -195,7 +195,11 @@ def tint(seed):
 
 # ------------------------------------------------------------------ OSM
 def load_osm():
-    js = json.loads((RAW / "osm_male.json").read_text())
+    return load_osm_file("osm_male.json")
+
+
+def load_osm_file(name):
+    js = json.loads((RAW / name).read_text())
     out = {"coast": [], "islands": [], "buildings": [], "roads": [], "parks": [], "piers": [],
            "breakwaters": [], "beaches": [], "squares": [], "pitches": [], "marinas": []}
     for el in js["elements"]:

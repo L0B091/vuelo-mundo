@@ -26,7 +26,6 @@ const PROP_RANGE := {
 	"tree": [500.0, true]
 }
 const PH_MODEL := {
-	"lamp": "street_lamp_02",
 	"bin": "metal_trash_can",
 	"bench": "painted_wooden_bench",
 	"chair": "plastic_monobloc_chair_01",
@@ -327,6 +326,8 @@ func _prop_mesh(kind: String) -> Mesh:
 		sc.free()
 	else:
 		match kind:
+			"lamp":
+				mesh = PropMeshes.street_light()
 			"scooter":
 				mesh = PropMeshes.scooter()
 			"car":
