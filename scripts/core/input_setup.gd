@@ -14,6 +14,14 @@ const ACTIONS: Dictionary = {
 	"run": [KEY_SHIFT],
 	"boost": [KEY_B],
 	"camera_toggle": [KEY_C],
+	# acrobacias (en celular: deslizar en la zona de mirada / doble toque)
+	"trick_roll_left": [KEY_Z],
+	"trick_roll_right": [KEY_X],
+	"trick_loop": [KEY_R],
+	"trick_flip": [KEY_F],
+	"trick_spin": [KEY_G],
+	"trick_dodge_left": [KEY_V],
+	"trick_dodge_right": [KEY_N],
 }
 
 
