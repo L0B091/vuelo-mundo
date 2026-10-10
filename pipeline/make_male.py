@@ -39,6 +39,19 @@ ROAD_W = {"primary": 11.0, "primary_link": 7.0, "secondary": 9.0, "tertiary": 7.
           "service": 4.0, "pedestrian": 5.0, "footway": 2.5, "path": 2.0}
 SIDEWALK_W = 1.6
 SHOP_ROADS = {"primary", "secondary", "tertiary"}
+# modelos listos (Kenney, CC0): los nombres los resuelve tools/gen_male.gd (KENNEY)
+VEHICLES = ("car", "taxi", "van", "delivery", "suv", "pickup", "car", "taxi")
+SHOP_FRONT = ("fruit_stand", "bread_stand", "freezer", "crate", "barrel", "shop_shelf")
+EXTRA_KINDS = ("taxi", "van", "delivery", "suv", "pickup", "traffic_light", "sign_stop", "sign_street",
+               "elec_pole", "cone", "planter", "fruit_stand", "bread_stand", "freezer", "crate", "barrel",
+               "shop_shelf", "cafe_table", "stool", "roof_tank", "antenna", "stall_roof", "fish_crate")
+
+
+def market_point(z):
+    """Mercado de pescado de Malé (frente al puerto norte), en coordenadas locales de la zona."""
+    from vm_common import lonlat_to_global
+    e, n = lonlat_to_global(73.5087, 4.1781)[:2]
+    return ((e - z.e0) / z.k, (z.n0 - n) / z.k)
 LANDMARKS = {
     151402193: "islamic_centre",       # Masjid-al-Sultan Muhammad Thakurufaanu Al Auzam
     1317932599: "hukuru_miskiy",       # Mezquita del Viernes antigua (piedra de coral)
@@ -186,9 +199,12 @@ def hh(s):
 
 def tint(seed):
     # paleta de Malé: blancos, cremas, pasteles cálidos, algún celeste/verde agua
-    pal = [(0.95, 0.94, 0.90), (0.93, 0.89, 0.80), (0.96, 0.86, 0.72), (0.88, 0.92, 0.93),
-           (0.82, 0.90, 0.86), (0.95, 0.80, 0.74), (0.90, 0.90, 0.90), (0.98, 0.93, 0.75),
-           (0.80, 0.86, 0.94), (0.92, 0.84, 0.88)]
+    # paleta de Malé: mucho blanco y crema, pero también pasteles fuertes (turquesa, verde,
+    # amarillo, rosa, celeste, terracota) como en las fachadas reales
+    pal = [(0.95, 0.94, 0.90), (0.93, 0.87, 0.74), (0.97, 0.80, 0.55), (0.62, 0.84, 0.86),
+           (0.62, 0.82, 0.62), (0.94, 0.68, 0.62), (0.90, 0.90, 0.90), (0.98, 0.88, 0.45),
+           (0.60, 0.72, 0.92), (0.90, 0.68, 0.82), (0.85, 0.55, 0.42), (0.55, 0.78, 0.74),
+           (0.96, 0.94, 0.90), (0.75, 0.88, 0.95)]
     c = pal[hh(seed) % len(pal)]
     return (c[0], c[1], c[2], 1.0)
 
@@ -605,7 +621,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
     tiene más motos que habitantes con licencia), algunos autos y pickups, bancos/cestos en
     parques y malecón, macetas y sillas frente a comercios, aires acondicionados y balcones en las
     fachadas que dan a la calle, árboles de vereda, y cables entre postes."""
-    P = {k: [] for k in ("lamp", "scooter", "car", "bench", "bin", "chair", "plant", "ac", "balcony", "tree")}
+    P = {k: [] for k in ("lamp", "scooter", "car", "bench", "bin", "chair", "plant", "ac", "balcony", "tree")
+         + EXTRA_KINDS}
     cables = []
     bld_union = prep(unary_union([b["poly"] for b in blds]) if blds else Polygon())
     bld_buf = prep(unary_union([b["poly"].buffer(1.5) for b in blds]) if blds else Polygon())
@@ -655,7 +672,23 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                     sd = 1 if _frac(x, zz, 3) > 0.5 else -1
                     px, pz = x + nx * (w / 2 - 1.2) * sd, zz + nz * (w / 2 - 1.2) * sd
                     if rect.contains(Point(px, pz)) and land.contains(Point(px, pz)):
-                        P["car"].append([px, DECK_Y + 0.02, pz, math.atan2(dx, dz), 1.0 if _frac(px, pz) < 0.7 else 1.25])
+                        f = _frac(px, pz)
+                        kind = VEHICLES[int(f * len(VEHICLES)) % len(VEHICLES)]
+                        P[kind].append([px, DECK_Y + 0.02, pz, math.atan2(dx, dz), 1.0])
+            # cestos, conos, carteles y postes a lo largo de la vereda
+            for x, zz, dx, dz in _along(g, 23.0, 7.0):
+                nx, nz = dz, -dx
+                sd = 1 if _frac(x, zz, 11) > 0.5 else -1
+                px, pz = x + nx * (w / 2 + 0.5) * sd, zz + nz * (w / 2 + 0.5) * sd
+                pt = Point(px, pz)
+                if not (rect.contains(pt) and land.contains(pt)) or bld_union.contains(pt):
+                    continue
+                f = _frac(px, pz, 12)
+                yaw = math.atan2(nx * sd, nz * sd)
+                kind = ("bin" if f < 0.3 else "sign_street" if f < 0.42 else "elec_pole" if f < 0.55
+                        else "planter" if f < 0.68 and hw in SHOP_ROADS else "cone" if f < 0.71 else None)
+                if kind:
+                    P[kind].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
             # árboles de vereda (pocos: Malé es muy densa)
             for x, zz, dx, dz in _along(g, 31.0, 13.0):
                 if _frac(x, zz, 4) < 0.6:
@@ -666,6 +699,26 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                 pt = Point(px, pz)
                 if rect.contains(pt) and land.contains(pt) and not bld_buf.contains(pt):
                     P["tree"].append([px, DECK_Y, pz, _frac(px, pz) * 6.28, 0.8 + _frac(pz, px) * 0.5])
+    # cruces: semáforos en las calles principales, carteles de pare en las demás
+    ends = {}
+    for hw, g, w, nm in road_info:
+        if hw in ("footway", "path", "pedestrian") or g.geom_type != "LineString":
+            continue
+        for c in (g.coords[0], g.coords[-1]):
+            k = (round(c[0] / 3.0), round(c[1] / 3.0))
+            ends.setdefault(k, []).append((hw, w, c))
+    for k, lst in ends.items():
+        if len(lst) < 3:
+            continue
+        cx, cz = lst[0][2]
+        main = any(h in SHOP_ROADS for h, _, _ in lst)
+        wmax = max(w for _, w, _ in lst)
+        for q in range(2 if main else 1):
+            a = q * math.pi + _frac(cx, cz, 13) * 0.5
+            px, pz = cx + math.cos(a) * (wmax / 2 + 0.8), cz + math.sin(a) * (wmax / 2 + 0.8)
+            pt = Point(px, pz)
+            if rect.contains(pt) and land.contains(pt) and not bld_union.contains(pt):
+                P["traffic_light" if main else "sign_stop"].append([px, DECK_Y + 0.02, pz, a + math.pi / 2, 1.0])
     # cables: entre farolas consecutivas, y cruzando la calle cada tanto (catenaria en el juego)
     for row in lamps_by_road:
         for a, b in zip(row, row[1:]):
@@ -723,10 +776,43 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                     f = _frac(cx, cz, 9)
                     if f < 0.25:
                         P["plant"].append([cx + nx * 0.6, DECK_Y + 0.03, cz + nz * 0.6, yaw, 1.0])
-                    elif f < 0.33:
+                    elif f < 0.40:
+                        kind = SHOP_FRONT[int(_frac(cz, cx, 14) * len(SHOP_FRONT)) % len(SHOP_FRONT)]
+                        P[kind].append([cx + nx * 0.8, DECK_Y + 0.03, cz + nz * 0.8, yaw + math.pi, 1.0])
+                    elif f < 0.46:
+                        P["cafe_table"].append([cx + nx * 1.6, DECK_Y + 0.03, cz + nz * 1.6, yaw, 1.0])
+                        for k in (-0.7, 0.7):
+                            P["stool"].append([cx + nx * 1.6 + ux * k, DECK_Y + 0.03, cz + nz * 1.6 + uz * k, yaw, 1.0])
+                    elif f < 0.52:
                         for k in (-0.5, 0.5):
                             P["chair"].append([cx + nx * 0.9 + ux * k, DECK_Y + 0.03, cz + nz * 0.9 + uz * k,
                                                yaw + math.pi, 1.0])
+    # azoteas: tanques de agua y antenas (casi todas las azoteas de Malé tienen alguno)
+    for b in blds:
+        g = b["poly"]
+        if g.geom_type != "Polygon" or g.area < 40 or not rect.contains(g.centroid):
+            continue
+        c = g.representative_point()
+        f = _frac(c.x, c.y, 15)
+        y = DECK_Y + b["h"] - 1.0 + 0.05
+        if f < 0.55:
+            P["roof_tank"].append([c.x, y, c.y, f * 12.0, 1.0])
+        if 0.3 < f < 0.75:
+            q = g.buffer(-1.5)
+            if not q.is_empty:
+                p2 = q.exterior.interpolate(_frac(c.y, c.x, 16) * q.exterior.length) if q.geom_type == "Polygon" else c
+                P["antenna"].append([p2.x, y, p2.y, f * 9.0, 1.0])
+    # mercado de pescado y frutas (Malé, frente al puerto norte, ~73.5087 E 4.1781 N)
+    mk = market_point(z)
+    if mk is not None and rect.contains(Point(*mk)):
+        for r_ in range(4):
+            for c_ in range(6):
+                px, pz = mk[0] + c_ * 3.2, mk[1] + r_ * 4.0
+                if not land.contains(Point(px, pz)) or bld_union.contains(Point(px, pz)):
+                    continue
+                P["stall_roof"].append([px, DECK_Y + 0.02, pz, 0.0, 1.0])
+                P["fruit_stand" if (r_ + c_) % 3 else "fish_crate"].append([px, DECK_Y + 0.03, pz, 0.0, 1.0])
+                P["crate"].append([px + 1.2, DECK_Y + 0.03, pz + 0.9, _frac(px, pz) * 3.0, 1.0])
     out = {k: [[round(v, 3) for v in it] for it in lst] for k, lst in P.items()}
     out["cables"] = [[round(v, 2) for v in c] for c in cables]
     print(z.id, "detalle urbano:", {k: len(v) for k, v in out.items()})

@@ -27,7 +27,30 @@ const PROP_RANGE := {
 	"balcony": [260.0, true],
 	"tree": [500.0, true],
 	"lounger": [140.0, false],
-	"parasol": [260.0, true]
+	"parasol": [260.0, true],
+	"taxi": [300.0, true],
+	"van": [300.0, true],
+	"delivery": [300.0, true],
+	"suv": [300.0, true],
+	"pickup": [300.0, true],
+	"traffic_light": [260.0, true],
+	"sign_stop": [140.0, false],
+	"sign_street": [150.0, false],
+	"elec_pole": [320.0, true],
+	"cone": [60.0, false],
+	"planter": [90.0, false],
+	"fruit_stand": [90.0, false],
+	"bread_stand": [80.0, false],
+	"freezer": [80.0, false],
+	"shop_shelf": [70.0, false],
+	"crate": [60.0, false],
+	"barrel": [70.0, false],
+	"cafe_table": [80.0, false],
+	"stool": [55.0, false],
+	"roof_tank": [380.0, false],
+	"antenna": [260.0, false],
+	"stall_roof": [160.0, true],
+	"fish_crate": [50.0, false]
 }
 const PH_MODEL := {
 	"bin": "metal_trash_can",
@@ -329,7 +352,13 @@ func _prop_mesh(kind: String) -> Mesh:
 	if _mats.has(key):
 		return _mats[key]
 	var mesh: Mesh
-	if PH_MODEL.has(kind):
+	if PropCatalog.KENNEY.has(kind):
+		var sc: Node = (
+			(load("res://assets/models/kenney/" + str(PropCatalog.KENNEY[kind][0])) as PackedScene).instantiate()
+		)
+		mesh = PropCatalog.fit_size(_merge_meshes(sc), float(PropCatalog.KENNEY[kind][1]))
+		sc.free()
+	elif PH_MODEL.has(kind):
 		var id: String = PH_MODEL[kind]
 		var sc: Node = (load("res://assets/models/%s/%s.gltf" % [id, id]) as PackedScene).instantiate()
 		mesh = _merge_meshes(sc)
@@ -362,7 +391,7 @@ func _prop_mesh(kind: String) -> Mesh:
 		var bm := ShaderMaterial.new()
 		bm.shader = load("res://shaders/boat_bob.gdshader")
 		(mesh as ArrayMesh).surface_set_material(0, bm)
-	if kind in ["scooter", "car"]:
+	if kind == "scooter":
 		# color por instancia (MultiMesh.use_colors) multiplicado al color de vértice
 		var mat := (mesh as ArrayMesh).surface_get_material(0) as StandardMaterial3D
 		mat.vertex_color_is_srgb = true
@@ -419,7 +448,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 	for kind: String in PROP_RANGE:
 		var all_items: Array = props.get(kind, [])
 		# raleo: Malé tiene motos y aires por todos lados, pero el móvil no
-		var every: int = {"scooter": 3, "ac": 2, "balcony": 2}.get(kind, 1)
+		var every: int = {"scooter": 2}.get(kind, 1)
 		var items: Array = []
 		for k in all_items.size():
 			if k % every == 0:
@@ -445,7 +474,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				lst[b] = tmp
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_colors = kind in ["scooter", "car"]
+			mm.use_colors = kind == "scooter"
 			mm.mesh = mesh
 			mm.instance_count = lst.size()
 			var org := Vector3(key.x * PROP_CELL, 0, key.y * PROP_CELL)

@@ -102,7 +102,9 @@ func _poll() -> void:
 		var z := index.get_zone(id)
 		# ya pedida la instanciación: el recurso fue retirado y su estado deja de ser válido
 		var st := (
-			ResourceLoader.THREAD_LOAD_LOADED if rec.has("inst_task") else ResourceLoader.load_threaded_get_status(z.scene)
+			ResourceLoader.THREAD_LOAD_LOADED
+			if rec.has("inst_task")
+			else ResourceLoader.load_threaded_get_status(z.scene)
 		)
 		if st == ResourceLoader.THREAD_LOAD_LOADED and not rec.has("inst_task"):
 			# instanciar ~1000 nodos costaba 50-85 ms en el hilo principal: se hace en un hilo

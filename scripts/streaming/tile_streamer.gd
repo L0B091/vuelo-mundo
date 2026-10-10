@@ -250,6 +250,10 @@ func _build_task(key: String, path: String, step: int, tex_div: int, skirt: floa
 	var res := TileBuilder.build(path, step, tex_div, skirt, col_step)
 	res["key"] = key
 	res["gen"] = gen
+	# la textura geomórfica (4096 px) se decodifica aquí, en el hilo, no en el principal
+	var geo_path := "res://data/tiles/L8/geo/%s.png" % key.substr(2)
+	if res.get("has_water", false) and key.begins_with(str(detail_level)) and ResourceLoader.exists(geo_path):
+		res["geo_tex"] = load(geo_path)
 	res["build_ms"] = float(Time.get_ticks_usec() - t0) / 1000.0
 	_mutex.lock()
 	_results.append(res)
@@ -308,9 +312,8 @@ func _make_tile_node(res: Dictionary) -> Node3D:
 		mat.set_shader_parameter(&"abs_lat", res.abs_lat)
 		mat.set_shader_parameter(&"foam_depth", 1.2 if level == detail_level else 2.5)
 		# geomorfología del Allen Coral Atlas por tesela (planicies, lagunas, crestas)
-		var geo_path := "res://data/tiles/L8/geo/%s.png" % str(res.key).substr(2)
-		if level == detail_level and ResourceLoader.exists(geo_path):
-			mat.set_shader_parameter(&"geo_tex", load(geo_path))
+		if level == detail_level and res.has("geo_tex"):
+			mat.set_shader_parameter(&"geo_tex", res.geo_tex)
 			mat.set_shader_parameter(&"use_geo", true)
 			mat.set_shader_parameter(&"geo_jitter", 0.0)
 		wm.material_override = mat

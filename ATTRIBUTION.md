@@ -116,3 +116,15 @@ somera 6 m, laguna profunda 20 m): d = 47.8·r − 41.2 (`data/sdb_fit.json`). S
 campo: es una estimación, mezclada al 70 % con el modelo existente solo donde este da < 25 m,
 y atenuada en los 250 m del borde de cada micro-mapa. Aplicada a las teselas L8 cubiertas por
 la escena (431 celdas, promedio a 611 m) y a las zonas de Malé y del resort.
+
+## Kenney asset packs (CC0 1.0)
+Ready-made models by Kenney (www.kenney.nl), CC0 1.0 Public Domain, used for street detail
+(vehicles, traffic lights, signs, power poles, cones, shop displays/freezers/shelves, crates,
+barrels, cafe tables and stools, potted plants, roof antennas, market canvas stalls, fish):
+- Car Kit — https://kenney.nl/assets/car-kit
+- City Kit (Roads) — https://kenney.nl/assets/city-kit-roads
+- Mini Market — https://kenney.nl/assets/mini-market
+- Survival Kit — https://kenney.nl/assets/survival-kit
+- Furniture Kit — https://kenney.nl/assets/furniture-kit
+- Food Kit — https://kenney.nl/assets/food-kit
+Files: assets/models/kenney/ (list per pack in assets/ASSETS.json).

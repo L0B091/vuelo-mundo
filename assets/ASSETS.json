@@ -192,5 +192,112 @@
   "polycount": 6097,
   "source": "https://polyhaven.com/a/potted_plant_04",
   "license": "CC0 1.0"
+ },
+ {
+  "id": "kenney/kenney_car-kit",
+  "source": "https://kenney.nl/assets/car-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "ambulance.glb",
+   "box.glb",
+   "cone.glb",
+   "delivery-flat.glb",
+   "delivery.glb",
+   "garbage-truck.glb",
+   "hatchback-sports.glb",
+   "police.glb",
+   "sedan.glb",
+   "suv.glb",
+   "taxi.glb",
+   "truck-flat.glb",
+   "truck.glb",
+   "van.glb"
+  ]
+ },
+ {
+  "id": "kenney/kenney_city-kit-roads",
+  "source": "https://kenney.nl/assets/city-kit-roads",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "construction-barrier.glb",
+   "construction-cone.glb",
+   "electricity-pole.glb",
+   "road-sign-empty.glb",
+   "road-sign-object-street.glb",
+   "road-sign-object-warning.glb",
+   "road-sign-stop.glb",
+   "sign-highway.glb",
+   "traffic-light.glb"
+  ]
+ },
+ {
+  "id": "kenney/kenney_mini-market",
+  "source": "https://kenney.nl/assets/mini-market",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "bottle-return.glb",
+   "cash-register.glb",
+   "display-bread.glb",
+   "display-fruit.glb",
+   "freezer.glb",
+   "freezers-standing.glb",
+   "shelf-bags.glb",
+   "shelf-boxes.glb",
+   "shopping-basket.glb",
+   "shopping-cart.glb"
+  ]
+ },
+ {
+  "id": "kenney/kenney_survival-kit",
+  "source": "https://kenney.nl/assets/survival-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "barrel.glb",
+   "box-large.glb",
+   "box.glb",
+   "bucket.glb",
+   "fish-large.glb",
+   "fish.glb",
+   "signpost.glb",
+   "structure-canvas.glb"
+  ]
+ },
+ {
+  "id": "kenney/kenney_furniture-kit",
+  "source": "https://kenney.nl/assets/furniture-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "benchCushion.glb",
+   "cardboardBoxClosed.glb",
+   "cardboardBoxOpen.glb",
+   "chairRounded.glb",
+   "plantSmall1.glb",
+   "plantSmall2.glb",
+   "pottedPlant.glb",
+   "stoolBar.glb",
+   "tableRound.glb",
+   "televisionAntenna.glb"
+  ]
+ },
+ {
+  "id": "kenney/kenney_food-kit",
+  "source": "https://kenney.nl/assets/food-kit",
+  "author": "Kenney (www.kenney.nl)",
+  "license": "CC0 1.0",
+  "files": [
+   "apple.glb",
+   "bag.glb",
+   "banana.glb",
+   "coconut.glb",
+   "fish.glb",
+   "orange.glb",
+   "pineapple.glb",
+   "watermelon.glb"
+  ]
  }
 ]
