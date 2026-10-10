@@ -86,7 +86,8 @@ func apply() -> void:
 	# bajo el agua no se ve el cielo: fondo del color del agua (la superficie la dibuja el mar)
 	env.background_mode = Environment.BG_COLOR if underwater else Environment.BG_SKY
 	env.background_color = fogc
-	env.background_energy_multiplier = 2.4 if underwater else 1.0  # iguala el color de la niebla
+	# la niebla también tiñe el fondo bajo el agua: sin banda entre lo lejano y el fondo
+	env.fog_sky_affect = 1.0 if underwater else 0.0
 	fog_scale = 1.0 / float(_mix["fog"])  # main acorta la niebla de profundidad con esto
 	if sky_mat != null:
 		sky_mat.set_shader_parameter(&"sky_tint", Vector3(tint.r, tint.g, tint.b))

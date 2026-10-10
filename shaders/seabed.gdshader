@@ -56,7 +56,16 @@ void fragment() {
 	} else if (c == 6) {  // tapetes de microalgas
 		col = mix(sand, vec3(0.33, 0.32, 0.16), 0.55);
 	}
-	ALBEDO = col;
+	vec2 eu = min(p / zone_size, 1.0 - p / zone_size);
+	float edge = smoothstep(0.0, 0.08, min(eu.x, eu.y));
+	// mismo oscurecimiento con la profundidad que el lecho de las teselas (terrain.gdshader),
+	// para que el borde del micro-mapa no se note
+	float dep = max(-lp.y, 0.0);
+	vec3 mid = pow(vec3(0.45, 0.52, 0.50), vec3(2.2));
+	vec3 deep = pow(vec3(0.10, 0.14, 0.20), vec3(2.2));
+	vec3 base = mix(sand, col, edge);
+	base = mix(base, mid, smoothstep(0.5, 20.0, dep) * mix(1.0, 0.6, edge));
+	ALBEDO = mix(base, deep, smoothstep(40.0, 1500.0, dep));
 	ROUGHNESS = rough;
 	NORMAL_MAP = texture(sand_normal, uv).rgb;
 }

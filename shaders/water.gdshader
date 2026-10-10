@@ -125,22 +125,30 @@ void fragment() {
 	if (use_geo) {
 		vec2 jg = (vec2(sin(g.y * 0.21), cos(g.x * 0.19))) * 0.004;
 		int gc = int(texture(geo_tex, UV + jg).r * 255.0 + 0.5);
+		// cerca del borde del micro-mapa los efectos se apagan: empalma con el agua de las teselas
+		vec2 eu = min(UV, 1.0 - UV);
+		float edge = smoothstep(0.0, 0.08, min(eu.x, eu.y));
 		if (gc == 1) {
 			// rompiente: series de olas (período ~9 s) que llegan del océano y estallan en espuma
 			float set_ = 0.5 + 0.5 * sin(t * 0.7 + dot(g, vec2(0.013, 0.009)));
 			float lines = smoothstep(0.55, 1.0, sin(dot(g, vec2(0.35, 0.22)) - t * 2.2 + s.z * 4.0));
-			foam = max(foam, clamp(0.45 + 0.55 * lines, 0.0, 1.0) * mix(0.55, 1.0, set_));
+			foam = max(foam, clamp(0.45 + 0.55 * lines, 0.0, 1.0) * mix(0.55, 1.0, set_) * edge);
 		} else if (gc == 2 || gc == 3) {
-			col = mix(col, srgb(vec3(0.42, 0.90, 0.84)), 0.45);
+			col = mix(col, srgb(vec3(0.42, 0.90, 0.84)), 0.45 * edge);
 		} else if (gc == 6) {
-			col = mix(col, srgb(vec3(0.50, 0.93, 0.88)), 0.3);
+			col = mix(col, srgb(vec3(0.50, 0.93, 0.88)), 0.3 * edge);
 		}
 	}
 
 	float alpha = mix(0.45, 0.97, smoothstep(0.0, 12.0, d));
 	alpha *= smoothstep(-0.6, 0.0, d);
 	ALBEDO = mix(col, srgb(vec3(0.96, 0.98, 1.0)), foam);
-	ALPHA = clamp(max(alpha, foam * 0.92), 0.0, 1.0);
+	if (!FRONT_FACING) {
+		// visto desde abajo: superficie plateada/turquesa opaca (reflexión total interna)
+		ALBEDO = mix(srgb(vec3(0.10, 0.55, 0.62)), srgb(vec3(0.75, 0.92, 0.95)), 0.3 + 0.4 * foam);
+		NORMAL = -NORMAL;
+	}
+	ALPHA = FRONT_FACING ? clamp(max(alpha, foam * 0.92), 0.0, 1.0) : 0.92;
 	ROUGHNESS = mix(0.04, 0.6, foam);
 	METALLIC = 0.0;
 	SPECULAR = 0.6;
