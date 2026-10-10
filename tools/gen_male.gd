@@ -23,7 +23,9 @@ const PROP_RANGE := {
 	"plant": [110.0, false],
 	"ac": [170.0, false],
 	"balcony": [330.0, true],
-	"tree": [500.0, true]
+	"tree": [500.0, true],
+	"lounger": [140.0, false],
+	"parasol": [260.0, true]
 }
 const PH_MODEL := {
 	"bin": "metal_trash_can",
@@ -328,6 +330,10 @@ func _prop_mesh(kind: String) -> Mesh:
 		match kind:
 			"lamp":
 				mesh = PropMeshes.street_light()
+			"lounger":
+				mesh = PropMeshes.lounger()
+			"parasol":
+				mesh = PropMeshes.parasol()
 			"scooter":
 				mesh = PropMeshes.scooter()
 			"car":
@@ -690,14 +696,16 @@ func _ads(root: Node3D, meta: Dictionary) -> void:
 ## paredes de tablas y techos de paja (texturas Poly Haven CC0).
 func _resort_layers(root: Node3D, cols: Node3D, dir: String) -> int:
 	var t := 0
-	t += _layer(root, cols, dir, "deck", _pbr("coast_sand_01", 1.0, Color(1.0, 0.98, 0.94)), L_WALK, false)
+	t += _layer(root, cols, dir, "deck", _pbr("coast_sand_01", 1.0, Color(1.12, 1.1, 1.04)), L_WALK, false)
 	t += _layer(root, cols, dir, "beach", _pbr("coast_sand_01", 1.0), L_WALK, false)
-	t += _layer(root, cols, dir, "park", _pbr("sparse_grass", 1.0), L_WALK, false)
+	t += _layer(root, cols, dir, "park", _pbr("sparse_grass", 1.0, Color(0.72, 1.0, 0.55)), L_WALK, false)
 	t += _layer(root, cols, dir, "sidewalk", _pbr("coast_sand_01", 1.0, Color(0.92, 0.88, 0.8)), 0, false)
 	t += _layer(root, cols, dir, "pier", _pbr("wood_floor_deck", 1.0), L_WALK, false)
 	t += _layer(root, cols, dir, "stilts", _pbr("wood_floor_deck", 1.0, Color(0.7, 0.6, 0.5)), 0, true, 350.0, true)
 	t += _layer(root, cols, dir, "walls", _pbr("white_planks_clean", 1.0), L_SOLID, true, 0.0, true)
 	t += _layer(root, cols, dir, "roofs", _pbr("white_planks_clean", 1.0), L_WALK, true)
+	t += _layer(root, cols, dir, "glass", _simple("villa_glass", Color(0.12, 0.18, 0.22), 0.05, 0.6), 0, false, 400.0)
+	t += _layer(root, cols, dir, "frames", _simple("villa_frame", Color(0.35, 0.25, 0.17), 0.6), 0, false, 300.0)
 	t += _layer(root, cols, dir, "thatch", _pbr("thatch_roof_angled", 1.0, Color(1.0, 0.86, 0.66)), 0, true)
 	t += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.9, 0.9, 0.85)), 0, false)
 	return t

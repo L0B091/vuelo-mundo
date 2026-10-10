@@ -91,6 +91,36 @@ static func street_light() -> ArrayMesh:
 	return _commit(st, _mat(0.45, 0.6))
 
 
+## Reposera de terraza: estructura de madera clara y colchoneta blanca.
+static func lounger() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var w := Color(0.62, 0.45, 0.3)
+	var c := Color(0.96, 0.95, 0.92)
+	for x in [-0.3, 0.3]:
+		for z in [-0.85, 0.75]:
+			_box(st, Vector3(0.06, 0.3, 0.06), Vector3(x, 0.15, z), w)
+	_box(st, Vector3(0.7, 0.06, 1.5), Vector3(0, 0.32, 0.1), w)
+	_box(st, Vector3(0.64, 0.08, 1.3), Vector3(0, 0.39, 0.2), c)
+	_box(st, Vector3(0.64, 0.08, 0.6), Vector3(0, 0.6, -0.72), c, Basis(Vector3.RIGHT, deg_to_rad(-40)))
+	return _commit(st, _mat(0.8))
+
+
+## Sombrilla de paja (palapa chica) para terrazas y playa.
+static func parasol() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	_cyl(st, 0.04, 2.4, Vector3(0, 1.2, 0), Color(0.55, 0.4, 0.28), Basis.IDENTITY, 6)
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.05
+	cone.bottom_radius = 1.4
+	cone.height = 0.6
+	cone.radial_segments = 10
+	cone.rings = 1
+	_add(st, cone, Transform3D(Basis.IDENTITY, Vector3(0, 2.45, 0)), Color(0.78, 0.64, 0.42))
+	return _commit(st, _mat(0.95))
+
+
 ## Auto chico / pickup (escala 1.25 = pickup o camioneta).
 static func car() -> ArrayMesh:
 	var st := SurfaceTool.new()

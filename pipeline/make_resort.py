@@ -74,6 +74,49 @@ def hip_roof(poly, y0, rise, mesh):
         mesh.add_tri_list([v0, v1, top], [tuple(-n)] * 3)  # cara inferior (alero visto desde abajo)
 
 
+def openings(g, y0, toward, meshes):
+    """Ventanales (vidrio oscuro con marco) y una puerta en la cara que mira al muelle/sendero."""
+    ext = list(g.exterior.coords)
+    if g.exterior.is_ccw:
+        ext = ext[::-1]
+    best, best_d = None, 1e9
+    edges = []
+    for a in range(len(ext) - 1):
+        p0, p1 = ext[a], ext[a + 1]
+        L = math.dist(p0, p1)
+        if L < 2.2:
+            continue
+        nx, nz = (p1[1] - p0[1]) / L, -(p1[0] - p0[0]) / L
+        mid = ((p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2)
+        if g.contains(Point(mid[0] + nx * 0.3, mid[1] + nz * 0.3)):
+            nx, nz = -nx, -nz
+            p0, p1 = p1, p0
+        edges.append((p0, p1, L, nx, nz, mid))
+        d = Point(mid).distance(toward) if toward is not None and not toward.is_empty else 0.0
+        if d < best_d:
+            best, best_d = len(edges) - 1, d
+    for k, (p0, p1, L, nx, nz, mid) in enumerate(edges):
+        ux, uz = (p1[0] - p0[0]) / L, (p1[1] - p0[1]) / L
+        o = 0.05
+        if k == best:
+            w, h = 1.0, 2.1
+            col = "frames"
+        else:
+            w, h = min(L * 0.7, 4.5), 2.0
+            col = "glass"
+        a = (mid[0] - ux * w / 2 + nx * o, mid[1] - uz * w / 2 + nz * o)
+        b = (mid[0] + ux * w / 2 + nx * o, mid[1] + uz * w / 2 + nz * o)
+        # marco: un poco más grande y apenas detrás
+        fa = (mid[0] - ux * (w / 2 + 0.08) + nx * (o - 0.01), mid[1] - uz * (w / 2 + 0.08) + nz * (o - 0.01))
+        fb = (mid[0] + ux * (w / 2 + 0.08) + nx * (o - 0.01), mid[1] + uz * (w / 2 + 0.08) + nz * (o - 0.01))
+        yb = y0 + (0.0 if k == best else 0.35)
+        if k != best:
+            meshes["frames"].add_quad(fb, fa, yb - 0.08, yb + h + 0.08)
+            meshes["frames"].add_quad(fa, fb, yb - 0.08, yb + h + 0.08)
+        meshes[col].add_quad(b, a, yb, yb + h)
+        meshes[col].add_quad(a, b, yb, yb + h)
+
+
 def posts_along(line, mesh, w, y_top, step=3.0):
     """Pilotes de madera a ambos lados de un muelle/terraza."""
     L = line.length
@@ -126,7 +169,7 @@ def main():
     out_dir = REPO / "data" / "sites" / z.id
     out_dir.mkdir(parents=True, exist_ok=True)
     meshes = {k: Mesh() for k in ("deck", "beach", "sidewalk", "park", "pier", "stilts", "walls",
-                                  "roofs", "thatch", "seabed")}
+                                  "roofs", "thatch", "seabed", "glass", "frames")}
 
     # isla: anillo de playa (25 m) en rampa hacia el agua + interior de arena/jardín
     inner = land.buffer(-25.0)
@@ -136,7 +179,10 @@ def main():
     def beach_y(x, zz):
         d = Point(x, zz).distance(inner_b)
         return GROUND_Y - min(1.0, d / 25.0) * (GROUND_Y + 0.9)
-    meshes["beach"].add_poly(beach.segmentize(4.0), 0.0, 1 / 3, y_fn=beach_y)
+    # bandas concéntricas cada 5 m: la pendiente queda suave (vértices intermedios reales)
+    for d0 in range(0, 25, 5):
+        band = land.buffer(-d0).difference(land.buffer(-(d0 + 5)))
+        meshes["beach"].add_poly(band.segmentize(5.0), 0.0, 1 / 3, y_fn=beach_y)
 
     paths = [loc(it["line_ll"]) for it in osm["roads"] if "line_ll" in it]
     path_poly = unary_union([g.buffer(1.3, cap_style=2) for g in paths]).intersection(inner) if paths else Polygon()
@@ -207,6 +253,44 @@ def main():
     for (x, zz, nx, nz) in ladders:
         ladder(x, zz, nx, nz, meshes["stilts"])
 
+    # mobiliario de terrazas: dos reposeras y una sombrilla del lado de la laguna
+    props = {"lounger": [], "parasol": [], "plant": []}
+    deck_safe = walk_deck.buffer(-0.5)
+    for it, g in villas:
+        c = g.centroid
+        a, b = nearest_points(g, jet_u) if not jet_u.is_empty else (c, c)
+        dx, dz = c.x - b.x, c.y - b.y
+        n = math.hypot(dx, dz) or 1.0
+        dx, dz = dx / n, dz / n
+        px, pz = -dz, dx
+        hit = LineString([(c.x, c.y), (c.x + dx * 60, c.y + dz * 60)]).intersection(g.exterior)
+        r = min((c.distance(q) for q in (hit.geoms if hasattr(hit, "geoms") else [hit]) if not q.is_empty),
+                default=3.0)
+        yaw = math.atan2(-dx, -dz)
+        for side in (-0.9, 0.9):
+            q = Point(c.x + dx * (r + 1.3) + px * side, c.y + dz * (r + 1.3) + pz * side)
+            if deck_safe.contains(q):
+                props["lounger"].append([round(q.x, 2), DECK_Y, round(q.y, 2), round(yaw, 3), 1.0])
+        q = Point(c.x + dx * (r + 1.6) + px * 2.4, c.y + dz * (r + 1.6) + pz * 2.4)
+        if deck_safe.contains(q):
+            props["parasol"].append([round(q.x, 2), DECK_Y, round(q.y, 2), 0.0, 1.0])
+        q = Point(a.x + (b.x - a.x) * 0.5 + px * 1.2, a.y + (b.y - a.y) * 0.5 + pz * 1.2)
+        if deck_safe.contains(q):
+            props["plant"].append([round(q.x, 2), DECK_Y, round(q.y, 2), 0.0, 1.0])
+    # playa: reposeras y sombrillas cada ~22 m sobre la arena alta
+    ring = land.buffer(-15.0).exterior
+    s_ = 0.0
+    while s_ < ring.length:
+        q = ring.interpolate(s_)
+        q2 = ring.interpolate(s_ + 1.0)
+        nx, nz = -(q2.y - q.y), (q2.x - q.x)
+        yaw = math.atan2(nx, nz)
+        props["parasol"].append([round(q.x, 2), beach_y(q.x, q.y), round(q.y, 2), 0.0, 1.0])
+        for off in (-1.2, 1.2):
+            qq = ring.interpolate(s_ + off)
+            props["lounger"].append([round(qq.x, 2), beach_y(qq.x, qq.y), round(qq.y, 2), round(yaw, 3), 1.0])
+        s_ += 22.0
+
     # interior: senderos de arena compacta, jardín tropical y suelo de arena
     blds_all = unary_union([g.buffer(0.5) for _, g in land_blds]) if land_blds else Polygon()
     garden = inner.difference(path_poly).difference(blds_all).buffer(-4.0).buffer(2.0).intersection(inner)
@@ -217,11 +301,13 @@ def main():
     for it, g in land_blds:
         y1 = GROUND_Y + LAND_BLD_H + (hh(it["id"]) % 2) * 1.5
         walls_of(g, GROUND_Y - 0.2, y1, meshes["walls"], (0.96, 0.94, 0.9, 1), (2.0, 0.0))
+        openings(g, GROUND_Y, path_poly, meshes)
         meshes["roofs"].add_poly(g, y1, 1 / 4)
         hip_roof(g, y1 + 0.05, min(4.0, 0.25 * math.sqrt(g.area) + 1.0), meshes["thatch"])
     for it, g in villas:
         y1 = DECK_Y + VILLA_H
         walls_of(g, DECK_Y - 0.05, y1, meshes["walls"], (0.93, 0.88, 0.8, 1), (2.0, 0.0))
+        openings(g, DECK_Y, jet_u, meshes)
         meshes["roofs"].add_poly(g, y1, 1 / 4)
         hip_roof(g, y1 + 0.05, min(3.5, 0.3 * math.sqrt(g.area) + 1.0), meshes["thatch"])
 
@@ -303,7 +389,7 @@ def main():
     meta = {
         "id": z.id, "name": z.name, "style": "resort", "size": [z.w, z.h], "deck_y": GROUND_Y,
         "pier_y": DECK_Y, "k": z.k, "origin_global": [z.e0, z.n0], "depth_n": N, "landmarks": [],
-        "ad_slots": [], "palms": palms, "props": {}, "paths": {}, "boats": [b for b in boat_points(land, rect)
+        "ad_slots": [], "palms": palms, "props": props, "paths": {}, "boats": [b for b in boat_points(land, rect)
                                                      if not over.buffer(8).contains(Point(b[0], b[2]))][:14],
         "stats": {"buildings_land": len(land_blds), "villas_overwater": len(villas),
                   "jetties": len(jetty_lines), "jetty_km": round(sum(l.difference(land).length for l in jetty_lines) / 1000, 2),
