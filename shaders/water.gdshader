@@ -22,6 +22,9 @@ bool in_cut(vec2 p) {
 	return a || b;
 }
 uniform bool use_cut = true;
+// Detalle de oleaje por perfil (0 bajo … 12 ultra): espectro "tipo FFT" de ondas extra con
+// dispersión de aguas profundas (ω = √(g·k)), sesgado al viento. Lo fija Quality.
+global uniform int water_detail;
 
 uniform sampler2D depth_tex : filter_linear, repeat_disable;
 uniform float tex_n = 65.0;
@@ -70,6 +73,20 @@ void fragment() {
 	s += wave(g, vec2(260.0, -170.0), 0.10, 2.6, t);
 	s += wave(g, vec2(-410.0, -333.0), 0.06, 3.4, t);
 	s += wave(g, vec2(800.0, 610.0), 0.03, 4.8, t);
+	// espectro adicional: longitudes de 40 m a 0.6 m, amplitud ∝ λ (pendiente constante),
+	// direcciones repartidas ±70° alrededor del viento (NE monzón ≈ (0.8, -0.6))
+	for (int i = 0; i < 12; i++) {
+		if (i >= water_detail) {
+			break;
+		}
+		float fi = float(i);
+		float lam = 40.0 * pow(0.68, fi);
+		float ang = 0.64 + sin(fi * 2.399) * 1.2;
+		vec2 dir = vec2(cos(ang), -sin(ang));
+		vec2 ab = round(dir * P / lam);
+		float kk = TAU_ / lam;
+		s += wave(g, ab, lam * 0.012, sqrt(9.81 * kk), t);
+	}
 	// las olas se calman en lagunas y se desvanecen a lo lejos (evita aliasing)
 	float calm = mix(0.35, 1.0, smoothstep(2.0, 30.0, d));
 	float fade = 1.0 - smoothstep(600.0, 6000.0, view_dist);

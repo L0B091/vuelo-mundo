@@ -707,8 +707,17 @@ func _resort_layers(root: Node3D, cols: Node3D, dir: String) -> int:
 	t += _layer(root, cols, dir, "glass", _simple("villa_glass", Color(0.12, 0.18, 0.22), 0.05, 0.6), 0, false, 400.0)
 	t += _layer(root, cols, dir, "frames", _simple("villa_frame", Color(0.35, 0.25, 0.17), 0.6), 0, false, 300.0)
 	t += _layer(root, cols, dir, "thatch", _pbr("thatch_roof_angled", 1.0, Color(1.0, 0.86, 0.66)), 0, true)
-	t += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.9, 0.9, 0.85)), 0, false)
+	t += _layer(root, cols, dir, "seabed", _seabed(Color(0.9, 0.9, 0.85)), 0, false)
 	return t
+
+
+## Lecho marino: arena PBR + pasada aditiva de cáusticas (intensidad global por perfil).
+func _seabed(tint: Color) -> Material:
+	var m := (_pbr("coast_sand_01", 0.05, tint) as Material).duplicate() as Material
+	var c := ShaderMaterial.new()
+	c.shader = load("res://shaders/caustics.gdshader")
+	m.next_pass = c
+	return m
 
 
 func _build(zid: String) -> void:
@@ -751,7 +760,7 @@ func _build(zid: String) -> void:
 		)
 		tri += _layer(root, cols, dir, "walls", _facade(), L_SOLID, true, 0.0, true)
 		tri += _layer(root, cols, dir, "roofs", _pbr("concrete_floor_02", 1.0, Color(0.82, 0.8, 0.78)), L_WALK, true)
-		tri += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.85, 0.85, 0.8)), 0, false)
+		tri += _layer(root, cols, dir, "seabed", _seabed(Color(0.85, 0.85, 0.8)), 0, false)
 	# agua propia (el conector se recorta dentro del rectángulo de la zona)
 	var n: int = meta.depth_n
 	var raw := FileAccess.get_file_as_bytes(dir + "/depth.f32")

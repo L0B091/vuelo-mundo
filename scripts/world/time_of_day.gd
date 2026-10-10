@@ -22,6 +22,8 @@ var camera: Camera3D
 var fog_base: Color
 ## Multiplicador de la distancia de niebla (lluvia/nublado la acercan).
 var fog_scale: float = 1.0
+## Cámara bajo el nivel del mar: niebla turquesa corta (vista submarina).
+var underwater: bool = false
 var _rain: CPUParticles3D
 var _t: float = 0.0
 var _mix := {"cover": 0.22, "fog": 1.0, "light": 1.0, "rain": 0.0}
@@ -76,6 +78,10 @@ func apply() -> void:
 		Color(0.02, 0.03, 0.06), night
 	)
 	fogc = fogc.lerp(Color(0.55, 0.58, 0.62), (1.0 - lightf) * 0.6)
+	underwater = camera != null and camera.global_position.y < -0.05
+	if underwater:
+		fogc = Color(0.03, 0.32, 0.38).lerp(Color(0.01, 0.04, 0.08), night)
+		env.ambient_light_energy *= 0.7
 	env.fog_light_color = fogc
 	fog_scale = 1.0 / float(_mix["fog"])  # main acorta la niebla de profundidad con esto
 	if sky_mat != null:

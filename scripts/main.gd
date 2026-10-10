@@ -220,6 +220,8 @@ func _update_fog() -> void:
 	var end: float = base * clampf(1.0 + avatar.agl / 2500.0, 1.0, 4.0)
 	if tod != null:
 		end *= tod.fog_scale
+		if tod.underwater:
+			end = 45.0  # bajo el agua la visibilidad es de decenas de metros
 	env.fog_depth_end = end
 	env.fog_depth_begin = end * 0.2
 	avatar.camera.far = end * 1.1

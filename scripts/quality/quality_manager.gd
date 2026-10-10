@@ -199,6 +199,9 @@ func label() -> String:
 ## Aplica el perfil a la ventana, entorno, sol y cámara.
 func apply_to(viewport: Viewport, env: Environment, sun: DirectionalLight3D, cam: Camera3D) -> void:
 	var p := current
+	var wd := {"low": 0, "medium": 3, "high": 8, "ultra": 12}.get(current_name, 3) as int
+	RenderingServer.global_shader_parameter_set(&"water_detail", wd)
+	RenderingServer.global_shader_parameter_set(&"caustics_strength", 0.0 if current_name == "low" else 1.0)
 	viewport.scaling_3d_scale = float(p.render_scale)
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][int(p.msaa)]
 	RenderingServer.directional_shadow_atlas_set_size(int(p.shadow_size), true)
