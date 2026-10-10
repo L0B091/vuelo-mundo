@@ -46,3 +46,28 @@ func test_build_produces_mesh_and_collision() -> void:
 	assert_true(res.mesh is ArrayMesh)
 	assert_eq((res.collision as PackedFloat32Array).size(), 65 * 65)
 	assert_true(res.has_water)
+
+
+## Muestra la altura L8 (m) más cercana a una lat/lon.
+func _sample_detail(lat: float, lon: float) -> float:
+	var e := Geo.lon_to_e(lon)
+	var n := Geo.lat_to_n(lat)
+	var ij := Geo.tile_of(8, e, n)
+	var t := _tile(8, ij.x, ij.y)
+	var sz := Geo.tile_size(8)
+	var nn: int = t.n
+	var c: int = roundi((e - Geo.tile_origin_e(8, ij.x)) / sz * float(nn - 1))
+	var r: int = roundi((Geo.tile_origin_n(8, ij.y) - n) / sz * float(nn - 1))
+	return t.heights[r * nn + c]
+
+
+func test_atoll_lagoon_is_deep() -> void:
+	# centro de la laguna del atolón Malé Norte: 30-60 m según la literatura (no los -5..-15 de ETOPO)
+	var d := _sample_detail(4.42, 73.52)
+	assert_between(d, -70.0, -30.0, "laguna Malé Norte: %.0f m" % d)
+
+
+func test_reef_flat_is_shallow() -> void:
+	# borde de arrecife junto a Malé (planicie arrecifal del ACA): poco profundo
+	var d := _sample_detail(4.1725, 73.5165)
+	assert_between(d, -6.0, 3.0, "arrecife de Malé: %.0f m" % d)

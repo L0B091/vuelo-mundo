@@ -25,6 +25,13 @@ var env: Environment
 var sun: DirectionalLight3D
 var args: Dictionary = {}
 var frame_ms_max: float = 0.0
+## Cuadros de más de 50 ms (para investigar tirones).
+var spikes: Array = []
+## Peor cuadro en el que hubo un cambio tosco<->detalle (lo mide la prueba automática).
+var swap_frame_ms_max: float = 0.0
+var _prev_tiles_ms: float = 0.0
+var _prev_zones_ms: float = 0.0
+var _prev_swapped: bool = false
 
 var _idle_frames: int = 0
 var _elapsed: float = 0.0
@@ -146,6 +153,23 @@ func _process(dt: float) -> void:
 	var t1 := Time.get_ticks_usec()
 	zones.update(gp, hv, spd)
 	var t2 := Time.get_ticks_usec()
+	# el dt de este cuadro mide el trabajo del cuadro anterior
+	if _prev_swapped and _elapsed > 3.0:
+		swap_frame_ms_max = maxf(swap_frame_ms_max, real_ms)
+	if _elapsed > 3.0 and real_ms > 50.0:
+		spikes.append(
+			{
+				"t": snappedf(_elapsed, 0.01),
+				"ms": snappedf(real_ms, 0.1),
+				"prev_tiles_ms": snappedf(_prev_tiles_ms, 0.1),
+				"prev_zones_ms": snappedf(_prev_zones_ms, 0.1),
+				"time_scale": Engine.time_scale,
+				"swap": _prev_swapped
+			}
+		)
+	_prev_tiles_ms = (t1 - t0) / 1000.0
+	_prev_zones_ms = (t2 - t1) / 1000.0
+	_prev_swapped = bool(tiles.stats.swapped_this_frame)
 	if OS.is_debug_build() and (t2 - t0) > 25000:
 		print(
 			(

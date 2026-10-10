@@ -16,7 +16,7 @@
   },
   "L8": {
    "tiles": 96,
-   "bytes": 7761882,
+   "bytes": 7762673,
    "samples": 257,
    "i0": 176,
    "j0": 120,
@@ -53,6 +53,7 @@
  "sources": [
   "ETOPO 2022 v1 60s/15s surface (NOAA NCEI)",
   "Natural Earth 10m land + minor islands",
-  "OpenStreetMap natural=coastline / natural=reef (Maldivas)"
+  "OpenStreetMap natural=coastline / natural=reef (Maldivas)",
+  "Allen Coral Atlas geomorphic zones (CC BY 4.0) + published lagoon depths"
  ]
 }

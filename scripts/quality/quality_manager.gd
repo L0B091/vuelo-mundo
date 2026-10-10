@@ -23,7 +23,10 @@ const PROFILES: Dictionary = {
 		"water_tex_div": 4,
 		"coarse_radius": 1,
 		"detail_radius_m": 80000.0,
-		"max_finalize_per_frame": 2
+		"max_finalize_per_frame": 2,
+		"max_inflight": 2,
+		"finalize_budget_usec": 3000,
+		"collision_budget_usec": 2500
 	},
 	"medium":
 	{
@@ -36,7 +39,10 @@ const PROFILES: Dictionary = {
 		"water_tex_div": 2,
 		"coarse_radius": 1,
 		"detail_radius_m": 140000.0,
-		"max_finalize_per_frame": 3
+		"max_finalize_per_frame": 3,
+		"max_inflight": 3,
+		"finalize_budget_usec": 3000,
+		"collision_budget_usec": 2500
 	},
 	"high":
 	{
@@ -49,7 +55,10 @@ const PROFILES: Dictionary = {
 		"water_tex_div": 1,
 		"coarse_radius": 2,
 		"detail_radius_m": 220000.0,
-		"max_finalize_per_frame": 4
+		"max_finalize_per_frame": 4,
+		"max_inflight": 4,
+		"finalize_budget_usec": 3000,
+		"collision_budget_usec": 2500
 	},
 	"ultra":
 	{
@@ -62,7 +71,10 @@ const PROFILES: Dictionary = {
 		"water_tex_div": 1,
 		"coarse_radius": 2,
 		"detail_radius_m": 320000.0,
-		"max_finalize_per_frame": 6
+		"max_finalize_per_frame": 6,
+		"max_inflight": 4,
+		"finalize_budget_usec": 3000,
+		"collision_budget_usec": 2500
 	},
 }
 const SETTINGS_PATH := "user://settings.cfg"

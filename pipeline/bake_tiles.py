@@ -237,6 +237,9 @@ def bake_detail(stats):
     land |= rasterize(vector_to_3857([isl_small], "osm_islets"), ds, all_touched=True)
     reef = rasterize(vector_to_3857([rf], "osm_reefs"), ds, all_touched=True)
     h = apply_mask_rules(a, land, reef)
+    import lagoons
+    lat_rows = [global_to_lonlat(oe, on - r * step)[1] for r in range(rows)]
+    h, lag, _ = lagoons.correct(h, land, reef, ds, lat_rows, step)
     print("[detalle] micro-mapas tallados:", carve_sites(h, oe, on, step))
     write_level(DETAIL_LEVEL, DETAIL_SAMPLES, h, land, i0, j0, ni, nj, stats)
     stats["detail_parents"] = [[ci, cj] for cj in range(cj0, cj1 + 1) for ci in range(ci0, ci1 + 1)]
@@ -284,7 +287,8 @@ def main():
         "levels": stats,
         "sources": ["ETOPO 2022 v1 60s/15s surface (NOAA NCEI)",
                     "Natural Earth 10m land + minor islands",
-                    "OpenStreetMap natural=coastline / natural=reef (Maldivas)"],
+                    "OpenStreetMap natural=coastline / natural=reef (Maldivas)",
+                    "Allen Coral Atlas geomorphic zones (CC BY 4.0) + published lagoon depths"],
     }
     man_path.parent.mkdir(parents=True, exist_ok=True)
     man_path.write_text(json.dumps(manifest, indent=1))

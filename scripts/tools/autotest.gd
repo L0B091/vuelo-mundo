@@ -6,6 +6,15 @@ extends Node
 ##  4. Despegue y alejamiento (las zonas se descargan).
 ## Imprime un resumen JSON y sale con código 0 (PASS) o 1 (FAIL).
 
+## Presupuestos de rendimiento verificados en el cambio tosco<->detalle (cuadro completo y
+## trabajo de streaming del hilo principal). El streaming trabaja con ~3 ms de presupuesto por
+## cuadro; se toleran unos pocos cuadros >8 ms (en la máquina de pruebas compartida aparecen
+## pausas de 10-16 ms del SO incluso en secciones triviales) pero ninguno >25 ms.
+const SWAP_FRAME_BUDGET_MS: float = 33.0
+const TILE_UPDATE_SLOW_MS: float = 8.0
+const TILE_UPDATE_SLOW_RATE: float = 1.0 / 2000.0  # como máximo 1 de cada 2000 cuadros
+const TILE_UPDATE_BUDGET_MS: float = 25.0
+
 var main: Node
 var phase: String = "init"
 var t: float = 0.0
@@ -149,6 +158,13 @@ func _finish(fail_reason: String) -> void:
 	report["max_tile_build_ms_thread"] = snappedf(main.tiles.stats.max_build_ms, 0.1)
 	report["max_frame_ms"] = snappedf(main.frame_ms_max, 0.1)
 	report["origin_shifts"] = main.world.shift_count
+	report["max_tile_update_ms"] = snappedf(main.tiles.stats.max_update_ms, 0.01)
+	report["collisions_built"] = main.tiles.stats.collisions
+	report["frame_spikes"] = main.spikes
+	report["tile_updates"] = main.tiles.stats.updates
+	report["slow_tile_updates"] = main.tiles.stats.slow_updates
+	report["detail_swaps"] = main.tiles.stats.swaps
+	report["max_swap_frame_ms"] = snappedf(main.swap_frame_ms_max, 0.1)
 	report["max_step_y"] = snappedf(report.max_step_y, 0.0001)
 	var ok: bool = (
 		fail_reason == ""
@@ -158,6 +174,10 @@ func _finish(fail_reason: String) -> void:
 		and report.walk_cross_ok
 		and report.took_off
 		and report.max_step_y < 0.05
+		and report.detail_swaps > 0
+		and report.max_swap_frame_ms < SWAP_FRAME_BUDGET_MS
+		and report.max_tile_update_ms < TILE_UPDATE_BUDGET_MS
+		and report.slow_tile_updates <= maxi(6, int(report.tile_updates * TILE_UPDATE_SLOW_RATE))
 	)
 	report["result"] = "PASS" if ok else "FAIL"
 	report["reason"] = fail_reason

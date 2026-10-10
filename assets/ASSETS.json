@@ -1,0 +1,114 @@
+[
+ {
+  "id": "asphalt_02",
+  "kind": "texture",
+  "use": "calles (asfalto)",
+  "name": "Asphalt 02",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "source": "https://polyhaven.com/a/asphalt_02",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "concrete_pavers",
+  "kind": "texture",
+  "use": "veredas",
+  "name": "Concrete Pavers",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "source": "https://polyhaven.com/a/concrete_pavers",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "white_stucco",
+  "kind": "texture",
+  "use": "fachadas revocadas (se tiñen por edificio)",
+  "name": "White Stucco",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "source": "https://polyhaven.com/a/white_stucco",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "concrete_floor_02",
+  "kind": "texture",
+  "use": "terrazas / azoteas, explanadas",
+  "name": "Concrete Floor 02",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "source": "https://polyhaven.com/a/concrete_floor_02",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "coral_stone_wall",
+  "kind": "texture",
+  "use": "muros de piedra de coral (mezquita antigua, muros bajos)",
+  "name": "Coral Stone Wall",
+  "authors": [
+   "Dimitrios Savva"
+  ],
+  "source": "https://polyhaven.com/a/coral_stone_wall",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "coast_sand_01",
+  "kind": "texture",
+  "use": "playa artificial y arena",
+  "name": "Coast Sand 01",
+  "authors": [
+   "Rob Tuytel"
+  ],
+  "source": "https://polyhaven.com/a/coast_sand_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "sparse_grass",
+  "kind": "texture",
+  "use": "canteros y plazas verdes",
+  "name": "Sparse Grass",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "source": "https://polyhaven.com/a/sparse_grass",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "patterned_paving",
+  "kind": "texture",
+  "use": "Plaza de la República",
+  "name": "Patterned Paving",
+  "authors": [
+   "Charlotte Baglioni"
+  ],
+  "source": "https://polyhaven.com/a/patterned_paving",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "corrugated_iron_02",
+  "kind": "texture",
+  "use": "techos de chapa",
+  "name": "Corrugated Iron 02",
+  "authors": [
+   "Jenelle van Heerden",
+   "Sergej Majboroda"
+  ],
+  "source": "https://polyhaven.com/a/corrugated_iron_02",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "qwantani_noon_puresky",
+  "kind": "hdri",
+  "use": "cielo de mediodía (solo cielo, sin suelo)",
+  "name": "Qwantani Noon (Pure Sky)",
+  "authors": [
+   "Greg Zaal",
+   "Jarod Guest"
+  ],
+  "source": "https://polyhaven.com/a/qwantani_noon_puresky",
+  "license": "CC0 1.0"
+ }
+]

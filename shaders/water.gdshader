@@ -66,12 +66,17 @@ void fragment() {
 	float polar = smoothstep(52.0, 68.0, abs_lat);
 	vec3 shallow = mix(srgb(vec3(0.22, 0.85, 0.80)), srgb(vec3(0.32, 0.60, 0.55)), temperate);
 	vec3 mid = mix(srgb(vec3(0.02, 0.55, 0.72)), srgb(vec3(0.08, 0.34, 0.42)), temperate);
-	vec3 deep = mix(srgb(vec3(0.01, 0.12, 0.33)), srgb(vec3(0.02, 0.12, 0.22)), temperate);
+	vec3 deep = mix(srgb(vec3(0.01, 0.10, 0.30)), srgb(vec3(0.02, 0.12, 0.22)), temperate);
+	// laguna de atolón (25-60 m): azul zafiro, distinto del turquesa del arrecife y del azul
+	// marino del océano abierto
+	vec3 lagoon = mix(srgb(vec3(0.02, 0.33, 0.66)), srgb(vec3(0.05, 0.26, 0.36)), temperate);
 	shallow = mix(shallow, srgb(vec3(0.36, 0.52, 0.56)), polar);
 	mid = mix(mid, srgb(vec3(0.12, 0.28, 0.34)), polar);
 	deep = mix(deep, srgb(vec3(0.04, 0.10, 0.16)), polar);
-	vec3 col = mix(shallow, mid, smoothstep(0.5, 9.0, d));
-	col = mix(col, deep, smoothstep(9.0, 300.0, d));
+	lagoon = mix(lagoon, mid, polar);
+	vec3 col = mix(shallow, mid, smoothstep(0.5, 8.0, d));
+	col = mix(col, lagoon, smoothstep(8.0, 40.0, d));
+	col = mix(col, deep, smoothstep(70.0, 600.0, d));
 
 	// espuma: banda de orilla con ruptura animada
 	float shore = 1.0 - smoothstep(0.0, foam_depth, d);

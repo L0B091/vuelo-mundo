@@ -21,7 +21,22 @@ var detail_level: int = 8
 var ratio: int = 4
 var detail_parents: Dictionary = {}  # Vector2i -> true
 var tiles: Dictionary = {}  # key -> Dictionary
-var stats: Dictionary = {"built": 0, "freed": 0, "holes": 0, "pending": 0, "live": 0, "max_build_ms": 0.0}
+var stats: Dictionary = {
+	"built": 0,
+	"freed": 0,
+	"holes": 0,
+	"pending": 0,
+	"live": 0,
+	"max_build_ms": 0.0,
+	"collisions": 0,
+	"max_update_ms": 0.0,
+	"last_update_ms": 0.0,
+	"queued": 0,
+	"updates": 0,
+	"slow_updates": 0,
+	"swaps": 0,
+	"swapped_this_frame": false
+}
 
 var _results: Array = []
 var _mutex := Mutex.new()
@@ -101,6 +116,8 @@ func prime(gp: GlobalPos) -> void:
 			"task": -1
 		}
 		stats.built += 1
+	for k: String in tiles:
+		_make_collision(tiles[k])  # arranque: el 3x3 inicial ya con colisión
 	_primed = true
 
 
@@ -109,6 +126,8 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 		return
 	if not _primed:
 		prime(gp)
+		return
+	var u0 := Time.get_ticks_usec()
 	var prof: Dictionary = Quality.current
 	var band: float = StreamMath.band_width(speed)
 	var want: Dictionary = {}  # key -> [level, i, j, parent_key]
@@ -138,21 +157,33 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 			missing.append([Geo.tile_distance(w[0], w[1], w[2], gp.e, gp.n), k])
 	missing.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
 	var c0 := Time.get_ticks_usec()
+	# pocas tareas en vuelo a la vez: los hilos no le roban CPU al hilo principal
+	var inflight := 0
+	for t: Dictionary in tiles.values():
+		if t.state == "loading":
+			inflight += 1
+	var slots: int = maxi(1, int(prof.get("max_inflight", 3))) - inflight
+	stats.queued = maxi(0, missing.size() - maxi(slots, 0))
 	for item: Array in missing:
+		if slots <= 0:
+			break
 		var w: Array = want[item[1]]
 		_request(item[1], w[0], w[1], w[2], w[3], prof)
+		slots -= 1
 	var c1 := Time.get_ticks_usec()
-	_finalize_results(int(prof.get("max_finalize_per_frame", 4)))
+	_finalize_results(int(prof.get("max_finalize_per_frame", 4)), int(prof.get("finalize_budget_usec", 3000)))
+	_build_collisions(gp, int(prof.get("collision_budget_usec", 2500)))
 	var c2 := Time.get_ticks_usec()
+	stats.swapped_this_frame = false
 	_update_visibility(children_wanted)
 	var c3 := Time.get_ticks_usec()
 	_unload(want, gp, speed)
 	var c4 := Time.get_ticks_usec()
-	if OS.is_debug_build() and c4 - c0 > 20000:
+	if OS.is_debug_build() and c4 - u0 > 8000:
 		print(
 			(
-				"[perf] teselas: pedir %.1f, terminar %.1f, visibilidad %.1f, descargar %.1f ms"
-				% [(c1 - c0) / 1000.0, (c2 - c1) / 1000.0, (c3 - c2) / 1000.0, (c4 - c3) / 1000.0]
+				"[perf] teselas: previo %.1f, pedir %.1f, terminar %.1f, visibilidad %.1f, descargar %.1f ms"
+				% [(c0 - u0) / 1000.0, (c1 - c0) / 1000.0, (c2 - c1) / 1000.0, (c3 - c2) / 1000.0, (c4 - c3) / 1000.0]
 			)
 		)
 	_check_holes(gp)
@@ -162,6 +193,12 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 			pending += 1
 	stats.pending = pending
 	stats.live = tiles.size()
+	var ums := float(Time.get_ticks_usec() - u0) / 1000.0
+	stats.last_update_ms = ums
+	stats.max_update_ms = maxf(stats.max_update_ms, ums)
+	stats.updates += 1
+	if ums > 8.0:
+		stats.slow_updates += 1
 
 
 func _request(key: String, level: int, i: int, j: int, parent: String, prof: Dictionary) -> void:
@@ -186,12 +223,14 @@ func _request(key: String, level: int, i: int, j: int, parent: String, prof: Dic
 	}
 	_gen += 1
 	tiles[key] = rec
-	rec.task = WorkerThreadPool.add_task(_build_task.bind(key, path, step, tex_div, skirt, _gen), false, "tile " + key)
+	rec.task = WorkerThreadPool.add_task(
+		_build_task.bind(key, path, step, tex_div, skirt, 2 if is_detail else 1, _gen), false, "tile " + key
+	)
 
 
-func _build_task(key: String, path: String, step: int, tex_div: int, skirt: float, gen: int) -> void:
+func _build_task(key: String, path: String, step: int, tex_div: int, skirt: float, col_step: int, gen: int) -> void:
 	var t0 := Time.get_ticks_usec()
-	var res := TileBuilder.build(path, step, tex_div, skirt)
+	var res := TileBuilder.build(path, step, tex_div, skirt, col_step)
 	res["key"] = key
 	res["gen"] = gen
 	res["build_ms"] = float(Time.get_ticks_usec() - t0) / 1000.0
@@ -200,16 +239,21 @@ func _build_task(key: String, path: String, step: int, tex_div: int, skirt: floa
 	_mutex.unlock()
 
 
-func _finalize_results(budget: int) -> void:
+func _finalize_results(budget: int, budget_usec: int = 3000) -> void:
+	var t_start := Time.get_ticks_usec()
 	for idx in range(_orphans.size() - 1, -1, -1):
 		if WorkerThreadPool.is_task_completed(_orphans[idx]):
 			WorkerThreadPool.wait_for_task_completion(_orphans[idx])
 			_orphans.remove_at(idx)
-	_mutex.lock()
-	var batch: Array = _results.slice(0, budget)
-	_results = _results.slice(budget)
-	_mutex.unlock()
-	for res: Dictionary in batch:
+	var done := 0
+	while done < budget and Time.get_ticks_usec() - t_start < budget_usec:
+		_mutex.lock()
+		if _results.is_empty():
+			_mutex.unlock()
+			break
+		var res: Dictionary = _results.pop_front()
+		_mutex.unlock()
+		done += 1
 		var key: String = res.key
 		var rec: Dictionary = tiles.get(key, {})
 		if rec.is_empty() or rec.state != "loading" or rec.get("gen", -1) != res.gen:
@@ -249,25 +293,56 @@ func _make_tile_node(res: Dictionary) -> Node3D:
 		wm.material_override = mat
 		wm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(wm)
+	root.visible = level == coarse_level  # el detalle aparece solo en el cambio atómico
+	root.set_meta(&"col_data", [res.collision, res.col_n, res.col_spacing, res.size])
+	world.add_child(root)
+	world.place(root, Geo.tile_origin_e(level, res.i), Geo.tile_origin_n(level, res.j), 0.0)
+	return root
+
+
+## Arma el cuerpo de colisión de una tesela (la parte cara: Jolt construye el heightfield).
+func _make_collision(rec: Dictionary) -> void:
+	var root: Node3D = rec.node
+	var data: Array = root.get_meta(&"col_data")
 	var body := StaticBody3D.new()
 	body.collision_layer = 1  # terreno: sólido pero NO caminable
 	body.collision_mask = 0
 	var cs := CollisionShape3D.new()
 	var hm := HeightMapShape3D.new()
-	var cn: int = res.col_n
-	hm.map_width = cn
-	hm.map_depth = cn
-	hm.map_data = res.collision
+	hm.map_width = data[1]
+	hm.map_depth = data[1]
+	hm.map_data = data[0]
 	cs.shape = hm
-	var sp: float = res.col_spacing
+	var sp: float = data[2]
 	cs.scale = Vector3(sp, sp, sp)
-	cs.position = Vector3(res.size * 0.5, 0.0, res.size * 0.5)
+	cs.position = Vector3(data[3] * 0.5, 0.0, data[3] * 0.5)
 	body.add_child(cs)
 	root.add_child(body)
-	root.set_meta(&"collision", cs)
-	world.add_child(root)
-	world.place(root, Geo.tile_origin_e(level, res.i), Geo.tile_origin_n(level, res.j), 0.0)
-	return root
+	# Se crea habilitada (Jolt arma el heightfield ahora, dentro del presupuesto) y recién
+	# después se deshabilita si corresponde: re-habilitarla luego es barato. Si se creara
+	# deshabilitada, el armado caería en el cuadro del cambio de nivel (el tirón de antes).
+	cs.disabled = not bool(rec.get("col_on", true))
+	root.remove_meta(&"col_data")
+	rec.col = cs
+
+
+## Colisiones pendientes: la más cercana primero, con presupuesto de tiempo por cuadro.
+func _build_collisions(gp: GlobalPos, budget_usec: int) -> void:
+	var t0 := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - t0 < budget_usec:
+		var best_key := ""
+		var best_d := INF
+		for k: String in tiles:
+			var t: Dictionary = tiles[k]
+			if t.state == "ready" and t.get("col") == null:
+				var d: float = Geo.tile_distance(t.level, t.i, t.j, gp.e, gp.n)
+				if d < best_d:
+					best_d = d
+					best_key = k
+		if best_key == "":
+			return
+		_make_collision(tiles[best_key])
+		stats.collisions += 1
 
 
 func _water_plane(level: int, size: float) -> PlaneMesh:
@@ -282,14 +357,17 @@ func _water_plane(level: int, size: float) -> PlaneMesh:
 
 func _set_tile_visible(rec: Dictionary, v: bool) -> void:
 	var node: Node3D = rec.get("node")
-	if node == null or node.visible == v:
-		return  # solo tocar cuando cambia: re-habilitar colisión reconstruye el heightfield
-	node.visible = v
-	var cs: CollisionShape3D = node.get_meta(&"collision")
-	cs.set_deferred(&"disabled", not v)
+	if node != null and node.visible != v:
+		node.visible = v
 
 
-## Una tesela tosca con hijos se oculta solo cuando TODOS sus hijos están listos.
+func _set_tile_collision(rec: Dictionary, on: bool) -> void:
+	rec.col_on = on
+	var cs: CollisionShape3D = rec.get("col")
+	if cs != null and cs.disabled == on:
+		cs.disabled = not on
+
+
 func _update_visibility(children_wanted: Dictionary) -> void:
 	var by_parent: Dictionary = {}
 	for k: String in tiles:
@@ -308,9 +386,21 @@ func _update_visibility(children_wanted: Dictionary) -> void:
 			if kid.state != "ready":
 				all_ready = false
 				break
+		# lo visual cambia de golpe (sin huecos); la colisión tosca se apaga recién cuando
+		# todas las hijas ya tienen la suya (se construyen de a una por cuadro)
+		var kids_col: bool = all_ready
+		for kid: Dictionary in kids:
+			if kid.get("col") == null:
+				kids_col = false
+		var node: Node3D = p.get("node")
+		if node != null and node.visible == all_ready:
+			stats.swaps += 1
+			stats.swapped_this_frame = true
 		_set_tile_visible(p, not all_ready)
+		_set_tile_collision(p, not kids_col)
 		for kid: Dictionary in kids:
 			_set_tile_visible(kid, all_ready)
+			_set_tile_collision(kid, all_ready)
 
 
 func _unload(want: Dictionary, gp: GlobalPos, speed: float) -> void:
@@ -354,7 +444,7 @@ func _check_holes(gp: GlobalPos) -> void:
 
 
 func is_idle() -> bool:
-	if stats.pending > 0:
+	if stats.pending > 0 or stats.queued > 0:
 		return false
 	_mutex.lock()
 	var empty := _results.is_empty()

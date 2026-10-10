@@ -36,7 +36,7 @@ static func read_vmt(path: String) -> Dictionary:
 
 
 ## step: decimación de la malla (1, 2, 4). tex_div: decimación de la textura de profundidad.
-static func build(path: String, step: int, tex_div: int, skirt_m: float) -> Dictionary:
+static func build(path: String, step: int, tex_div: int, skirt_m: float, col_step: int = 0) -> Dictionary:
 	var t := read_vmt(path)
 	if t.is_empty():
 		return {"error": "no se pudo leer %s" % path}
@@ -127,6 +127,23 @@ static func build(path: String, step: int, tex_div: int, skirt_m: float) -> Dict
 				dv = minf(-h, -1.0)
 			depth[r * tn + c] = dv
 	var img := Image.create_from_data(tn, tn, false, Image.FORMAT_RF, depth.to_byte_array())
+
+	# Colisión: puede ser más gruesa que la malla (Jolt tarda ~6 ms en armar un heightfield
+	# de 257x257 y ~1.5 ms uno de 129x129, siempre en el hilo principal).
+	var cstep: int = maxi(col_step, step) if col_step > 0 else step
+	while (n - 1) % cstep != 0:
+		cstep -= 1
+	var cm: int = (n - 1) / cstep + 1
+	var csp: float = spacing * float(cstep)
+	if cstep != step:
+		col = PackedFloat32Array()
+		col.resize(cm * cm)
+		for r in cm:
+			var kr: float = Geo.scale_k(on - float(r) * csp)
+			for c in cm:
+				col[r * cm + c] = heights[(r * cstep) * n + c * cstep] * kr / csp
+	m = cm
+	sp = csp
 
 	var lat_c: float = Geo.n_to_lat(on - size * 0.5)
 	return {
