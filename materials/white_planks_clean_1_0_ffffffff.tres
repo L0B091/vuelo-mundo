@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/white_planks_clean/white_planks_clean_diff.jpg" id="1_5slpv"]
+[ext_resource type="Texture2D" path="res://assets/textures/white_planks_clean/white_planks_clean_nor_gl.jpg" id="2_7qkuv"]
+[ext_resource type="Texture2D" path="res://assets/textures/white_planks_clean/white_planks_clean_arm.jpg" id="3_jklqp"]
+
+[resource]
+albedo_texture = ExtResource("1_5slpv")
+orm_texture = ExtResource("3_jklqp")
+normal_enabled = true
+normal_texture = ExtResource("2_7qkuv")
+texture_filter = 5

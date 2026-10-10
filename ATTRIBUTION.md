@@ -10,6 +10,7 @@ geometría de esos servicios; tampoco image-blaster ni gaussian splats.
 | **ETOPO 2022 v1** (60" y 15", superficie) — NOAA National Centers for Environmental Information. DOI: [10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74) | Relieve terrestre y batimetría del planeta tosco (60") y de la región de Maldivas (15") | Dominio público (Gobierno de EE.UU.). Cita: *NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model. NOAA NCEI. DOI: 10.25921/fd45-gt74.* |
 | **GEBCO** (a través de ETOPO 2022, que integra GEBCO entre sus fuentes batimétricas) | Profundidad del mar | GEBCO Compilation Group; uso libre con atribución |
 | **Natural Earth** 10m `land`, `minor_islands`, `coastline` | Máscara de tierra/mar del planeta tosco | Dominio público — [naturalearthdata.com](https://www.naturalearthdata.com) |
+| **OpenStreetMap** micro-mapa del resort (islote Lankanfinolhu: costa, edificios, villas sobre el agua, muelles `man_made=pier`, senderos) vía Overpass | `data/sites/mv_lankanfinolhu/` (sin el nombre comercial del resort) | © Colaboradores de OpenStreetMap, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/) |
 | **OpenStreetMap** (`natural=coastline`, `natural=reef`) vía Overpass API | Costa e arrecifes de Maldivas en las teselas de detalle (`data/tiles/L8`) | © Colaboradores de OpenStreetMap, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/). Las teselas `data/tiles/L8/*.vmt` son una base de datos derivada y se distribuyen bajo ODbL. |
 | **Allen Coral Atlas** — zonas geomorfológicas (`coral-atlas:geomorphic_data_verbose`), WFS público [allencoralatlas.org/geoserver/ows](https://allencoralatlas.org/geoserver/ows) (no la copia de Google Earth Engine) | Planicies y crestas arrecifales, lagunas someras/profundas: corrección de profundidad de lagunas de atolón en `data/tiles/L8` (ver `pipeline/lagoons.py`) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). © 2018-2023 Allen Coral Atlas Partnership and Arizona State University. Cita: *Allen Coral Atlas (2022). Imagery, maps and monitoring of the world's tropical coral reefs. doi.org/10.5281/zenodo.3833242* |
 
@@ -36,6 +37,9 @@ Lista mantenida en `assets/ASSETS.json` (la escribe `pipeline/fetch_assets.py`).
 | Sparse Grass | Amal Kumar | canteros y plazas verdes | https://polyhaven.com/a/sparse_grass |
 | Patterned Paving | Charlotte Baglioni | Plaza de la República | https://polyhaven.com/a/patterned_paving |
 | Corrugated Iron 02 | Jenelle van Heerden, Sergej Majboroda | techos de chapa | https://polyhaven.com/a/corrugated_iron_02 |
+| Wood Floor Deck | Dimitrios Savva | muelles de madera y terrazas de villas sobre el agua (resort) | https://polyhaven.com/a/wood_floor_deck |
+| Thatch Roof Angled | Rob Tuytel, Dimitrios Savva | techos de paja de villas y pabellones (resort) | https://polyhaven.com/a/thatch_roof_angled |
+| White Planks Clean | Rob Tuytel | paredes de madera de villas (resort) | https://polyhaven.com/a/white_planks_clean |
 | Qwantani Noon (Pure Sky) | Greg Zaal, Jarod Guest | cielo de mediodía (solo cielo, sin suelo) | https://polyhaven.com/a/qwantani_noon_puresky |
 
 Mapa en el juego: «© OpenStreetMap contributors, NOAA NCEI ETOPO 2022, Natural Earth, Allen Coral Atlas (CC BY 4.0)».

@@ -49,6 +49,7 @@ var _last_center_ready: bool = true
 var _primed: bool = false
 var _orphans: Array[int] = []
 var _gen: int = 0
+var _col_enables_left: int = 1
 
 
 func setup(p_world: WorldRoot) -> void:
@@ -378,13 +379,21 @@ func _set_tile_visible(rec: Dictionary, v: bool) -> void:
 
 
 func _set_tile_collision(rec: Dictionary, on: bool) -> void:
-	rec.col_on = on
 	var cs: CollisionShape3D = rec.get("col")
 	if cs != null and cs.disabled == on:
+		# activar un campo de alturas reinserta la forma en el espacio físico (caro con 16
+		# hijas a la vez): como mucho una activación por cuadro, el resto espera al siguiente
+		if on:
+			if _col_enables_left <= 0:
+				rec.col_on = false
+				return
+			_col_enables_left -= 1
 		cs.disabled = not on
+	rec.col_on = on
 
 
 func _update_visibility(children_wanted: Dictionary) -> void:
+	_col_enables_left = 1
 	var by_parent: Dictionary = {}
 	for k: String in tiles:
 		var t: Dictionary = tiles[k]
@@ -406,7 +415,7 @@ func _update_visibility(children_wanted: Dictionary) -> void:
 		# todas las hijas ya tienen la suya (se construyen de a una por cuadro)
 		var kids_col: bool = all_ready
 		for kid: Dictionary in kids:
-			if kid.get("col") == null:
+			if kid.get("col") == null or not kid.get("col_on", false):
 				kids_col = false
 		var node: Node3D = p.get("node")
 		if node != null and node.visible == all_ready:

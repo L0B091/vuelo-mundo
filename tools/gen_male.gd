@@ -5,7 +5,7 @@ extends SceneTree
 ## LODs automáticos, colisión troceada en celdas (se agrega de a poco al cargar la zona),
 ## hitos (mezquitas, plaza, bandera), palmeras, agua/lecho propios y carteles publicitarios.
 
-const ZONES := ["mv_male_oeste", "mv_male_este"]
+const ZONES := ["mv_male_oeste", "mv_male_este", "mv_lankanfinolhu"]
 const CELL := 250.0
 const L_WALK := 2
 const L_SOLID := 8
@@ -686,6 +686,23 @@ func _ads(root: Node3D, meta: Dictionary) -> void:
 		)
 
 
+## Resort sobre el agua: arena, jardín, senderos, muelles de madera en pilotes, villas con
+## paredes de tablas y techos de paja (texturas Poly Haven CC0).
+func _resort_layers(root: Node3D, cols: Node3D, dir: String) -> int:
+	var t := 0
+	t += _layer(root, cols, dir, "deck", _pbr("coast_sand_01", 1.0, Color(1.0, 0.98, 0.94)), L_WALK, false)
+	t += _layer(root, cols, dir, "beach", _pbr("coast_sand_01", 1.0), L_WALK, false)
+	t += _layer(root, cols, dir, "park", _pbr("sparse_grass", 1.0), L_WALK, false)
+	t += _layer(root, cols, dir, "sidewalk", _pbr("coast_sand_01", 1.0, Color(0.92, 0.88, 0.8)), 0, false)
+	t += _layer(root, cols, dir, "pier", _pbr("wood_floor_deck", 1.0), L_WALK, false)
+	t += _layer(root, cols, dir, "stilts", _pbr("wood_floor_deck", 1.0, Color(0.7, 0.6, 0.5)), 0, true, 350.0, true)
+	t += _layer(root, cols, dir, "walls", _pbr("white_planks_clean", 1.0), L_SOLID, true, 0.0, true)
+	t += _layer(root, cols, dir, "roofs", _pbr("white_planks_clean", 1.0), L_WALK, true)
+	t += _layer(root, cols, dir, "thatch", _pbr("thatch_roof_angled", 1.0, Color(1.0, 0.86, 0.66)), 0, true)
+	t += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.9, 0.9, 0.85)), 0, false)
+	return t
+
+
 func _build(zid: String) -> void:
 	var dir := "res://data/sites/" + zid
 	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + "/meta.json"))
@@ -698,22 +715,35 @@ func _build(zid: String) -> void:
 	cols.name = "Colisiones"
 	root.add_child(cols)
 	var tri := 0
-	tri += _layer(root, cols, dir, "deck", _pbr("concrete_floor_02", 1.0), L_WALK, false)
-	tri += _layer(root, cols, dir, "road", _pbr("asphalt_02", 1.0), 0, false)
-	tri += _layer(root, cols, dir, "sidewalk", _pbr("concrete_pavers", 1.0), 0, false)
-	tri += _layer(root, cols, dir, "paint", _simple("road_paint", Color(0.92, 0.92, 0.88), 0.7), 0, false, 220.0)
-	tri += _layer(root, cols, dir, "park", _pbr("sparse_grass", 1.0), 0, false)
-	tri += _layer(root, cols, dir, "square", _pbr("patterned_paving", 1.0), 0, false)
-	tri += _layer(root, cols, dir, "pitch", _pbr("sparse_grass", 1.0, Color(0.75, 0.95, 0.75)), 0, false)
-	tri += _layer(root, cols, dir, "beach", _pbr("coast_sand_01", 1.0), L_WALK, false)
-	tri += _layer(root, cols, dir, "pier", _pbr("concrete_floor_02", 1.0, Color(0.9, 0.88, 0.84)), L_WALK, false)
-	tri += _layer(root, cols, dir, "breakwater", _pbr("coral_stone_wall", 1.0, Color(0.8, 0.8, 0.8)), L_SOLID, false)
-	tri += _layer(
-		root, cols, dir, "seawall", _pbr("coral_stone_wall", 1.0, Color(0.85, 0.85, 0.85)), L_SOLID, false, 0.0, true
-	)
-	tri += _layer(root, cols, dir, "walls", _facade(), L_SOLID, true, 0.0, true)
-	tri += _layer(root, cols, dir, "roofs", _pbr("concrete_floor_02", 1.0, Color(0.82, 0.8, 0.78)), L_WALK, true)
-	tri += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.85, 0.85, 0.8)), 0, false)
+	if meta.get("style", "") == "resort":
+		tri += _resort_layers(root, cols, dir)
+	else:
+		tri += _layer(root, cols, dir, "deck", _pbr("concrete_floor_02", 1.0), L_WALK, false)
+		tri += _layer(root, cols, dir, "road", _pbr("asphalt_02", 1.0), 0, false)
+		tri += _layer(root, cols, dir, "sidewalk", _pbr("concrete_pavers", 1.0), 0, false)
+		tri += _layer(root, cols, dir, "paint", _simple("road_paint", Color(0.92, 0.92, 0.88), 0.7), 0, false, 220.0)
+		tri += _layer(root, cols, dir, "park", _pbr("sparse_grass", 1.0), 0, false)
+		tri += _layer(root, cols, dir, "square", _pbr("patterned_paving", 1.0), 0, false)
+		tri += _layer(root, cols, dir, "pitch", _pbr("sparse_grass", 1.0, Color(0.75, 0.95, 0.75)), 0, false)
+		tri += _layer(root, cols, dir, "beach", _pbr("coast_sand_01", 1.0), L_WALK, false)
+		tri += _layer(root, cols, dir, "pier", _pbr("concrete_floor_02", 1.0, Color(0.9, 0.88, 0.84)), L_WALK, false)
+		tri += _layer(
+			root, cols, dir, "breakwater", _pbr("coral_stone_wall", 1.0, Color(0.8, 0.8, 0.8)), L_SOLID, false
+		)
+		tri += _layer(
+			root,
+			cols,
+			dir,
+			"seawall",
+			_pbr("coral_stone_wall", 1.0, Color(0.85, 0.85, 0.85)),
+			L_SOLID,
+			false,
+			0.0,
+			true
+		)
+		tri += _layer(root, cols, dir, "walls", _facade(), L_SOLID, true, 0.0, true)
+		tri += _layer(root, cols, dir, "roofs", _pbr("concrete_floor_02", 1.0, Color(0.82, 0.8, 0.78)), L_WALK, true)
+		tri += _layer(root, cols, dir, "seabed", _pbr("coast_sand_01", 0.05, Color(0.85, 0.85, 0.8)), 0, false)
 	# agua propia (el conector se recorta dentro del rectángulo de la zona)
 	var n: int = meta.depth_n
 	var raw := FileAccess.get_file_as_bytes(dir + "/depth.f32")

@@ -86,7 +86,7 @@ def posts_along(line, mesh, w, y_top, step=3.0):
         px, pz = -dz / n, dx / n
         for side in (-1, 1):
             cx, cz = p.x + px * side * (w / 2 - 0.15), p.y + pz * side * (w / 2 - 0.15)
-            sq = box(cx - 0.12, cz - 0.12, cx + 0.12, cz + 0.12)
+            sq = box(cx - 0.09, cz - 0.09, cx + 0.09, cz + 0.09)
             walls_of(sq, -2.5, y_top - 0.15, mesh, (0.55, 0.42, 0.3, 1))
         s += step
 
@@ -160,6 +160,16 @@ def main():
             jetty_polys.append(g.buffer(JETTY_W / 2, cap_style=2, join_style=2))
         else:
             jetty_polys.append(g)
+    # OSM a veces dibuja villas encima de la pasarela: la pasarela manda (se recorta la villa)
+    jet0 = unary_union(jetty_polys).buffer(0.4) if jetty_polys else Polygon()
+    trimmed = []
+    for it, g in villas:
+        g2 = g.difference(jet0)
+        if g2.geom_type == "MultiPolygon":
+            g2 = max(g2.geoms, key=lambda q: q.area)
+        if g2.geom_type == "Polygon" and g2.area > 12:
+            trimmed.append((it, g2))
+    villas = trimmed
     terr = []
     ladders = []
     for it, g in villas:
@@ -173,7 +183,15 @@ def main():
         nx, nz = nx / n, nz / n
         ladders.append((cx + nx * (t.exterior.distance(Point(cx, cz)) - 0.2) if False else far[0] - nx * 0.3,
                         far[1] - nz * 0.3, nx, nz))
-    over = unary_union(jetty_polys + terr).difference(land).intersection(rect)
+    # pasarela corta de cada villa al muelle más cercano (si OSM no la mapea)
+    jet_u = unary_union(jetty_polys) if jetty_polys else Polygon()
+    spurs = []
+    for t in terr:
+        if not jet_u.is_empty and not t.intersects(jet_u):
+            a, b = nearest_points(t, jet_u)
+            if a.distance(b) < 25.0:
+                spurs.append(LineString([a, b]).buffer(0.9, cap_style=2).union(b.buffer(0.9)).union(a.buffer(0.9)))
+    over = unary_union(jetty_polys + terr + spurs).difference(land).intersection(rect)
     walk_deck = over.difference(unary_union([g for _, g in villas]))
     meshes["pier"].add_poly(walk_deck, DECK_Y, 1 / 2.5)
     walls_of(over, DECK_Y - 0.3, DECK_Y, meshes["stilts"], (0.6, 0.47, 0.34, 1))  # canto del deck
@@ -238,7 +256,11 @@ def main():
                 continue
             dl8 = max(l8.depth(z.e0 + x * z.k, z.n0 - zz * z.k), 1.0)
             dc = p.distance(coast)
-            model = min(dl8, 0.8 + dc * 0.012 + max(0.0, dc - 380.0) * 0.15)
+            # plataforma de arrecife: 1-4 m hasta ~250 m de la costa, luego se funde con L8
+            shelf = 0.8 + min(dc, 250.0) * 0.012
+            t = min(1.0, max(0.0, (dc - 250.0) / 350.0))
+            t = t * t * (3 - 2 * t)
+            model = shelf * (1 - t) + max(dl8, shelf) * t
             we = max(0.0, 1.0 - p.distance(edge) / 250.0)
             depth[r, c] = model * (1 - we) + dl8 * we
     depth.tofile(out_dir / "depth.f32")
@@ -256,29 +278,28 @@ def main():
 
     # recorrido de prueba: aterrizar en la terraza de la villa más lejana de un muelle largo y
     # caminar por el muelle hacia la isla
-    best = None
+    parts = []
     for ln in jetty_lines:
         seg = ln.difference(land)
-        if seg.geom_type != "LineString" or seg.length < 120:
-            continue
-        a, b = Point(seg.coords[0]), Point(seg.coords[-1])
-        tip, root_ = (a, b) if a.distance(land) > b.distance(land) else (b, a)
-        v = min(villas, key=lambda vg: vg[1].distance(tip)) if villas else None
-        if v is None or v[1].distance(tip) > 15:
-            continue
-        if best is None or seg.length > best[0].length:
-            best = (seg, tip, root_, v)
+        parts += [g for g in (seg.geoms if hasattr(seg, "geoms") else [seg]) if g.geom_type == "LineString"]
+    safe = walk_deck.buffer(-0.45)
+    cands = sorted(((v, seg) for seg in parts if seg.length >= 120 for v in villas if v[1].distance(seg) < 8.0),
+                   key=lambda c: -c[0][1].distance(land))
     walk = None
     landing = None
-    if best:
-        seg, tip, root_, v = best
-        tp = Polygon(v[1]).buffer(TERRACE).difference(v[1].buffer(0.6))
-        lp, _ = nearest_points(tp, tip)
-        landing = [z.e0 + lp.x * z.k, z.n0 - lp.y * z.k]
-        s0 = seg.project(tip)
-        sgn = -1 if s0 > seg.length / 2 else 1
-        pts = [lp] + [seg.interpolate(s0 + sgn * d) for d in range(3, 80, 5)]
-        walk = [[z.e0 + p.x * z.k, z.n0 - p.y * z.k] for p in pts]
+    for v, seg in cands:
+        a, b = nearest_points(v[1], seg)
+        dd = a.distance(b) or 1.0
+        off = min(1.6, dd * 0.5)
+        lp = Point(a.x + (b.x - a.x) / dd * off, a.y + (b.y - a.y) / dd * off)  # terraza, frente a la puerta
+        s0 = seg.project(lp)
+        sgn = 1 if s0 < seg.length - 80 else -1
+        pts = [lp] + [seg.interpolate(s0 + sgn * d) for d in range(0, 80, 5)]
+        path = LineString([(p.x, p.y) for p in pts])
+        if all(safe.contains(path.interpolate(d)) for d in np.arange(0.0, path.length, 0.5)):
+            landing = [z.e0 + lp.x * z.k, z.n0 - lp.y * z.k]
+            walk = [[z.e0 + p.x * z.k, z.n0 - p.y * z.k] for p in pts]
+            break
     meta = {
         "id": z.id, "name": z.name, "style": "resort", "size": [z.w, z.h], "deck_y": GROUND_Y,
         "pier_y": DECK_Y, "k": z.k, "origin_global": [z.e0, z.n0], "depth_n": N, "landmarks": [],
@@ -287,7 +308,7 @@ def main():
         "stats": {"buildings_land": len(land_blds), "villas_overwater": len(villas),
                   "jetties": len(jetty_lines), "jetty_km": round(sum(l.difference(land).length for l in jetty_lines) / 1000, 2),
                   "deck_m2": round(walk_deck.area), "island_m2": round(land.area), "palms": len(palms),
-                  "ladders": len(ladders), "meshes": stats},
+                  "ladders": len(ladders), "spurs": len(spurs), "meshes": stats},
         "test_walk": walk, "landing": landing,
     }
     (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False))

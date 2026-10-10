@@ -57,6 +57,23 @@ for z in male:
         entry["landing"] = [e + w * 0.3, n - h * 0.6, 1.8 * k]
     zones.append(entry)
 
+# --- Resort real sobre el agua (pipeline/make_resort.py): isla Lankanfinolhu, Atolón Malé Norte.
+# Se nombra por la isla (sin marca comercial). Se llega volando desde Malé (~13 km al NE).
+rm = json.loads((REPO / "data" / "sites" / "mv_lankanfinolhu" / "meta.json").read_text())
+k = rm["k"]
+e, n = rm["origin_global"]
+w, h = rm["size"][0] * k, rm["size"][1] * k
+zones.append({"id": rm["id"], "name": rm["name"], "kind": "site", "parent": "MV", "origin": [e, n],
+              "size": [w, h], "neighbors": ["mv_male_este"], "available": True, "local_scale": k,
+              "scene": f"res://scenes/zones/{rm['id']}.scn",
+              "landing": [rm["landing"][0], rm["landing"][1], rm["pier_y"] * k],
+              "test_walk": rm["test_walk"],
+              "source": "OpenStreetMap (ODbL) + generación procedural"})
+
+for zz in zones:
+    if zz["id"] == "mv_male_este":
+        zz["neighbors"].append(rm["id"])
+
 out = {"version": 1,
        "crs": "EPSG:3857 metros; origen = esquina NO; tamaño = (este, sur)",
        "zones": zones}
