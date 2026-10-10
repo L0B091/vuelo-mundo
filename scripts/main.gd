@@ -289,12 +289,9 @@ func _process(dt: float) -> void:
 	avatar.set_inside_site(zones.inside_ready_site)
 	var t2 := Time.get_ticks_usec()
 	# el dt de este cuadro mide el trabajo del cuadro anterior
-	# coste de CPU del cuadro anterior (scripts + física), sin el render: con un renderizador
-	# por software (lavapipe en la máquina de pruebas) el render domina y depende de su carga
-	var cpu_ms := (
-		(Performance.get_monitor(Performance.TIME_PROCESS) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS))
-		* 1000.0
-	)
+	# coste medido de nuestro streaming (teselas + zonas) en el cuadro anterior. TIME_PROCESS de
+	# Godot no sirve: incluye la espera al render (con lavapipe superaba al propio cuadro).
+	var cpu_ms := _prev_tiles_ms + _prev_zones_ms
 	if _elapsed > 3.0:
 		cpu_ms_max = maxf(cpu_ms_max, cpu_ms)
 	if _prev_swapped and _elapsed > 3.0:
