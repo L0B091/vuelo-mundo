@@ -76,7 +76,7 @@ func _request(z: ZoneInfo, gp: GlobalPos, heading: Vector2) -> void:
 	}
 	stats.requests += 1
 	stats.last_request = req
-	var err := ResourceLoader.load_threaded_request(z.scene, "PackedScene", true)
+	var err := ResourceLoader.load_threaded_request(z.scene, "PackedScene", false)  # sin sub-hilos: no compite con el hilo principal
 	if err != OK:
 		push_error("ZoneStreamer: no se pudo pedir %s (%d)" % [z.scene, err])
 		return
