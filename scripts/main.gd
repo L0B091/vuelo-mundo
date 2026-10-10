@@ -35,11 +35,15 @@ var env: Environment
 var sun: DirectionalLight3D
 var tod: TimeOfDay
 var args: Dictionary = {}
+var sealife: Node3D = null
 var frame_ms_max: float = 0.0
 ## Cuadros de más de 50 ms (para investigar tirones).
 var spikes: Array = []
 ## Peor cuadro en el que hubo un cambio tosco<->detalle (lo mide la prueba automática).
 var swap_frame_ms_max: float = 0.0
+var swap_cpu_ms_max: float = 0.0
+var cpu_ms_max: float = 0.0
+var _perf: PerfOverlay = null
 var _prev_tiles_ms: float = 0.0
 var _prev_zones_ms: float = 0.0
 var _prev_swapped: bool = false
@@ -119,6 +123,9 @@ func _ready() -> void:
 	add_child(hud)
 	hud.visible = not args.has("hide-hud")
 	avatar.message.connect(hud.show_message)
+	hud.perf_toggled.connect(_set_perf)
+	if args.has("perf"):
+		_set_perf(true)
 	zones.zone_entered.connect(
 		func(id: String) -> void:
 			if id != "":
@@ -142,6 +149,7 @@ func _ready() -> void:
 	add_child(uwfx)
 	uwfx.setup(avatar, tod)
 	var life := SeaLife.new()
+	sealife = life
 	life.name = "SeaLife"
 	add_child(life)
 	life.setup(world, avatar)
@@ -184,7 +192,87 @@ func _build_environment() -> void:
 	add_child(sun)
 
 
+## --dump-geo: triángulos de lo visible (dentro de rango) agrupados por tipo de nodo, para perfilar.
+func _dump_geo() -> void:
+	var cam := get_viewport().get_camera_3d().global_position
+	var tot := {}
+	for n: GeometryInstance3D in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+		if not n.is_visible_in_tree():
+			continue
+		var r := n.visibility_range_end
+		if r > 0.0 and (n.global_transform * n.get_aabb().get_center()).distance_to(cam) > r:
+			continue
+		var mesh: Mesh = null
+		var mult := 1
+		if n is MeshInstance3D:
+			mesh = n.mesh
+		elif n is MultiMeshInstance3D and n.multimesh != null:
+			mesh = n.multimesh.mesh
+			mult = (
+				n.multimesh.visible_instance_count
+				if n.multimesh.visible_instance_count >= 0
+				else n.multimesh.instance_count
+			)
+		if mesh == null:
+			continue
+		var tris := 0
+		for i in mesh.get_surface_count():
+			var a := mesh.surface_get_arrays(i)
+			var idx: PackedInt32Array = a[Mesh.ARRAY_INDEX] if a[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			tris += (idx.size() if idx.size() > 0 else (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3
+		var key := "%s/%s" % [n.get_parent().name, str(n.name).get_slice("_", 0)]
+		tot[key] = int(tot.get(key, 0)) + tris * mult
+	var ks := tot.keys()
+	ks.sort_custom(func(a: String, b: String) -> bool: return tot[a] > tot[b])
+	for k: String in ks.slice(0, 20):
+		print("GEO ", k, " ", tot[k])
+
+
+## Medidor FPS/ms + registro CSV (pruebas en teléfono).
+func _set_perf(on: bool) -> void:
+	if on and _perf == null:
+		_perf = PerfOverlay.new()
+		_perf.context = func() -> String:
+			var gp := avatar.global_pos()
+			return "%s %s alt=%.0f" % [Quality.current_name, avatar.State.keys()[avatar.state], gp.up]
+		add_child(_perf)
+	elif not on and _perf != null:
+		_perf.queue_free()
+		_perf = null
+
+
+## --hide=props,reef,sealife,water,npc: apaga sistemas para medir su coste por separado.
+func _apply_hide() -> void:
+	if not args.has("hide"):
+		return
+	var parts: Array = Array(str(args.hide).split(","))
+	for n in get_tree().root.find_children("*", "Node3D", true, false):
+		var nm := str(n.name)
+		var off: bool = (
+			(
+				"props" in parts
+				and n is MultiMeshInstance3D
+				and n.has_meta(&"detail_kind")
+				and not nm.begins_with("coral")
+			)
+			or ("reef" in parts and nm.begins_with("coral_"))
+			or ("water" in parts and nm == "Agua")
+			or ("palms" in parts and nm.begins_with("Palm"))
+			or parts.any(func(x: String) -> bool: return x.begins_with("name:") and nm.begins_with(x.substr(5)))
+		)
+		if off:
+			n.visible = false
+	if "sealife" in parts and sealife != null:
+		sealife.process_mode = Node.PROCESS_MODE_DISABLED
+		sealife.visible = false
+	if "npc" in parts:
+		for n in get_tree().get_nodes_in_group(&"npc"):
+			n.visible = false
+
+
 func _process(dt: float) -> void:
+	if args.has("hide") and Engine.get_process_frames() % 30 == 0:
+		_apply_hide()
 	_elapsed += dt
 	var real_ms: float = dt * 1000.0 / maxf(Engine.time_scale, 0.001)  # delta viene escalado
 	frame_ms_max = maxf(frame_ms_max, real_ms) if _elapsed > 3.0 else 0.0
@@ -201,8 +289,17 @@ func _process(dt: float) -> void:
 	avatar.set_inside_site(zones.inside_ready_site)
 	var t2 := Time.get_ticks_usec()
 	# el dt de este cuadro mide el trabajo del cuadro anterior
+	# coste de CPU del cuadro anterior (scripts + física), sin el render: con un renderizador
+	# por software (lavapipe en la máquina de pruebas) el render domina y depende de su carga
+	var cpu_ms := (
+		(Performance.get_monitor(Performance.TIME_PROCESS) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS))
+		* 1000.0
+	)
+	if _elapsed > 3.0:
+		cpu_ms_max = maxf(cpu_ms_max, cpu_ms)
 	if _prev_swapped and _elapsed > 3.0:
 		swap_frame_ms_max = maxf(swap_frame_ms_max, real_ms)
+		swap_cpu_ms_max = maxf(swap_cpu_ms_max, cpu_ms)
 	if _elapsed > 3.0 and real_ms > 50.0:
 		spikes.append(
 			{
@@ -294,6 +391,8 @@ func _handle_cli(dt: float) -> void:
 
 
 func _save_shot() -> void:
+	if args.has("dump-geo"):
+		_dump_geo()
 	var img := get_viewport().get_texture().get_image()
 	var path := str(args.screenshot)
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())

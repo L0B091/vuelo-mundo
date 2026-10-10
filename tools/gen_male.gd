@@ -13,18 +13,18 @@ const L_WALK := 2
 const L_SOLID := 8
 const TEX := "res://assets/textures/%s/%s_%s.jpg"
 
-const PROP_CELL := 250.0
+const PROP_CELL := 100.0  # celdas chicas: el rango de visibilidad del MultiMesh se mide al centro de la celda
 ## tipo -> [distancia de dibujo base (m), sombra]
 const PROP_RANGE := {
 	"lamp": [420.0, true],
-	"scooter": [160.0, false],
+	"scooter": [120.0, false],
 	"car": [300.0, true],
 	"bench": [150.0, false],
-	"bin": [120.0, false],
-	"chair": [90.0, false],
-	"plant": [110.0, false],
-	"ac": [170.0, false],
-	"balcony": [330.0, true],
+	"bin": [70.0, false],
+	"chair": [55.0, false],
+	"plant": [60.0, false],
+	"ac": [130.0, false],
+	"balcony": [260.0, true],
 	"tree": [500.0, true],
 	"lounger": [140.0, false],
 	"parasol": [260.0, true]
