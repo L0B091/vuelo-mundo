@@ -106,6 +106,27 @@ const POSES := {
 	},
 }
 const FIST_FINGERS := ["index", "middle", "ring", "pinky"]
+## Nombres Rigify (DEF-*) -> esqueleto estilo UE de los Universal Base Characters (Quaternius).
+const UE_ALIAS := {
+	"DEF-hips": "pelvis",
+	"DEF-spine.001": "spine_01",
+	"DEF-spine.002": "spine_02",
+	"DEF-spine.003": "spine_03",
+	"DEF-neck": "neck_01",
+	"DEF-head": "Head",
+	"DEF-upper_arm.L": "upperarm_l",
+	"DEF-forearm.L": "lowerarm_l",
+	"DEF-hand.L": "hand_l",
+	"DEF-upper_arm.R": "upperarm_r",
+	"DEF-forearm.R": "lowerarm_r",
+	"DEF-hand.R": "hand_r",
+	"DEF-thigh.L": "thigh_l",
+	"DEF-shin.L": "calf_l",
+	"DEF-foot.L": "foot_l",
+	"DEF-thigh.R": "thigh_r",
+	"DEF-shin.R": "calf_r",
+	"DEF-foot.R": "foot_r",
+}
 
 ## Peso de cada pose (0..1); el avatar los anima con suavizado.
 var weights: Dictionary = {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "land": 0.0, "launch": 0.0}
@@ -114,9 +135,24 @@ var female: bool = false
 var _ids: Dictionary = {}
 
 
+## Índice de hueso aceptando nombres Rigify o UE (el modelo base es intercambiable).
+static func find_any(sk: Skeleton3D, name: String) -> int:
+	var b := sk.find_bone(name)
+	if b >= 0:
+		return b
+	if UE_ALIAS.has(name):
+		return sk.find_bone(UE_ALIAS[name])
+	if name.begins_with("DEF-f_"):
+		# DEF-f_index.01.R -> index_01_r
+		var parts := name.substr(6).split(".")
+		if parts.size() == 3:
+			return sk.find_bone("%s_%s_%s" % [parts[0], parts[1], parts[2].to_lower()])
+	return -1
+
+
 func _bone(sk: Skeleton3D, name: String) -> int:
 	if not _ids.has(name):
-		_ids[name] = sk.find_bone(name)
+		_ids[name] = find_any(sk, name)
 	return _ids[name]
 
 

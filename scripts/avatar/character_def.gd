@@ -5,12 +5,23 @@ extends Resource
 ## estándar de Godot / Rigify (DEF-*) del Universal Animation Library de Quaternius (CC0).
 
 const BASE_SCENE := "res://assets/characters/ual/AnimationLibrary_Godot_Standard.gltf"
+## Cuerpos separados masculino/femenino (Universal Base Characters "Superhero", Quaternius,
+## CC0) con las animaciones del Universal Animation Library en el mismo esqueleto.
+const HERO_MALE := "res://assets/characters/superhero/Superhero_Male_FullBody.gltf"
+const HERO_FEMALE := "res://assets/characters/superhero/Superhero_Female_FullBody.gltf"
+const HERO_ANIMS := "res://assets/characters/superhero/UAL1_UE.glb"
+## Trajes: "classic" = textura original; "color" = textura teñida con suit_color;
+## "metal" = teñido metálico satinado; "stealth" = negro mate con acentos.
+const SUITS := ["classic", "color", "metal", "stealth"]
 const SAVE_PATH := "user://character.tres"
 
 @export_enum("male", "female") var body: String = "male"
-@export var base_scene: String = BASE_SCENE
+@export var base_scene: String = HERO_MALE
+## Escena de donde se toman las animaciones si la malla base no trae AnimationPlayer.
+@export var anim_scene: String = HERO_ANIMS
+@export_enum("classic", "color", "metal", "stealth") var suit_style: String = "color"
 @export var height_scale: float = 1.0
-@export var suit_color: Color = Color(0.93, 0.93, 0.95)
+@export var suit_color: Color = Color(0.82, 0.83, 0.88)
 @export var accent_color: Color = Color(0.75, 0.08, 0.10)
 @export var skin_color: Color = Color(0.76, 0.56, 0.42)
 @export_enum("none", "short", "long", "bun") var hair_style: String = "short"
@@ -23,7 +34,8 @@ static func preset(kind: String) -> CharacterDef:
 	var d := CharacterDef.new()
 	d.body = kind
 	if kind == "female":
-		d.height_scale = 0.95
+		d.base_scene = HERO_FEMALE
+		d.height_scale = 1.0
 		d.hair_style = "long"
 		d.hair_color = Color(0.16, 0.09, 0.05)
 		d.suit_color = Color(0.10, 0.12, 0.20)
