@@ -8,6 +8,7 @@ extends Node3D
 const SPAWN_M := 4000.0
 const DESPAWN_M := 6000.0
 const FISH_BY_PROFILE := {"low": 20, "medium": 50, "high": 110, "ultra": 180}
+const CURIOUS := ["manta", "turtle", "whale_shark"]
 const BIG_SCALE := {"low": 0.4, "medium": 0.7, "high": 1.0, "ultra": 1.0}
 
 ## species, lat, lon, depth (m), count, radius (m), source (documentación del lugar)
@@ -125,7 +126,7 @@ const SPOTS := [
 	},
 ]
 const SPECIES := {
-	"manta": {"speed": 1.6, "turn": 0.5, "mode": 1, "amp": 0.18, "len": 3.0},
+	"manta": {"speed": 1.6, "turn": 0.5, "mode": 1, "amp": 0.18, "len": 4.2},
 	"eagle_ray": {"speed": 1.8, "turn": 0.7, "mode": 1, "amp": 0.2, "len": 1.2},
 	"whale_shark": {"speed": 1.2, "turn": 0.25, "mode": 0, "amp": 0.06, "len": 9.0},
 	"reef_shark": {"speed": 2.4, "turn": 1.0, "mode": 0, "amp": 0.1, "len": 1.7},
@@ -295,6 +296,14 @@ func _steer(g: Dictionary, dt: float) -> void:
 			a.target.y = -dd
 			a.t = _rng.randf_range(6.0, 14.0)
 		var want: Vector3 = (a.target - n.position).normalized() * spd
+		# curiosidad: mantas, tortugas y tiburón ballena se acercan a ~10 m del buceador y lo
+		# rodean despacio (comportamiento habitual con buceadores), sin chocar
+		var to_av: Vector3 = avatar.position - n.position
+		if CURIOUS.has(g.sp) and avatar.get(&"swimming") and to_av.length() < 60.0:
+			var orbit := to_av.normalized().cross(Vector3.UP) * spd
+			var pull := to_av.normalized() * spd * clampf((to_av.length() - 10.0) / 10.0, -1.0, 1.0)
+			want = want.lerp(pull + orbit, 0.85)
+			want.y = clampf(to_av.y, -1.0, 1.0) * 0.5
 		var away: Vector3 = n.position - avatar.position
 		if away.length() < 6.0 and g.sp != "whale_shark":
 			want += away.normalized() * spd * 1.5

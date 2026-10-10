@@ -5,6 +5,8 @@ extends SceneTree
 ## LODs automáticos, colisión troceada en celdas (se agrega de a poco al cargar la zona),
 ## hitos (mezquitas, plaza, bandera), palmeras, agua/lecho propios y carteles publicitarios.
 
+const REEF_CELL := 100.0
+const DETAIL_LOD := preload("res://scripts/world/detail_lod.gd")
 const ZONES := ["mv_male_oeste", "mv_male_este", "mv_lankanfinolhu"]
 const CELL := 250.0
 const L_WALK := 2
@@ -49,6 +51,12 @@ var _ad_registry: Array = []
 
 
 func _init() -> void:
+	# con --headless el renderizador ficticio descarta los datos de los MultiMesh (palmeras,
+	# mobiliario, corales) y la escena se guarda sin instancias: exigir un renderizador real
+	if DisplayServer.get_name() == "headless":
+		push_error("gen_male necesita un renderizador real: xvfb-run godot --rendering-method mobile ...")
+		quit(1)
+		return
 	for z: String in ZONES:
 		_build(z)
 	var f := FileAccess.open("res://data/ad_slots.json", FileAccess.WRITE)
@@ -462,12 +470,111 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 			mmi.set_meta(&"detail_kind", kind)
 			mmi.set_meta(&"detail_count", lst.size())
 			mmi.set_meta(&"detail_range", PROP_RANGE[kind][0])
-			mmi.set_script(load("res://scripts/world/detail_lod.gd"))
+			mmi.set_script(DETAIL_LOD)
 			holder.add_child(mmi)
 			total += lst.size()
 	_cables(holder, props.get("cables", []))
 	_boats_birds(root, meta)
 	print("  detalle urbano: %d instancias" % total)
+
+
+## Arrecife: corales y anémonas sobre los píxeles "Coral/Algae" (y algo en "Rock") del mapa
+## bentónico del Allen Coral Atlas, entre 0.8 y 20 m. Agrupados en celdas de 250 m con
+## DetailLod (densidad y distancia por perfil).
+func _reef(root: Node3D, dir: String, meta: Dictionary, depth_img: Image) -> void:
+	if not ResourceLoader.exists(dir + "/benthic.png"):
+		return
+	var ben := (load(dir + "/benthic.png") as Texture2D).get_image()
+	var w: float = meta.size[0]
+	var h: float = meta.size[1]
+	var dn := depth_img.get_width()
+	var kinds := {
+		"brain": [ReefMeshes.brain(), 0.0],
+		"staghorn": [ReefMeshes.staghorn(), 0.0],
+		"table": [ReefMeshes.table(), 0.0],
+		"anemone": [ReefMeshes.anemone(), 0.25],
+	}
+	var palette := {
+		"brain": [Color(0.62, 0.52, 0.32), Color(0.45, 0.5, 0.28), Color(0.7, 0.45, 0.4)],
+		"staghorn": [Color(0.75, 0.62, 0.42), Color(0.55, 0.42, 0.62), Color(0.4, 0.55, 0.65)],
+		"table": [Color(0.6, 0.55, 0.35), Color(0.5, 0.58, 0.45)],
+		"anemone": [Color(0.85, 0.55, 0.65), Color(0.7, 0.75, 0.4), Color(0.9, 0.7, 0.45)],
+	}
+	var cells := {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(dir)
+	var tries := int(w * h / 300.0)
+	for t in tries:
+		var x := rng.randf() * w
+		var z := rng.randf() * h
+		var c := int(
+			round(ben.get_pixel(int(x / w * (ben.get_width() - 1)), int(z / h * (ben.get_height() - 1))).r * 255.0)
+		)
+		if c != 3 and not (c == 5 and rng.randf() < 0.25):
+			continue
+		var d := depth_img.get_pixel(int(x / w * (dn - 1)), int(z / h * (dn - 1))).r
+		if d < 0.8 or d > 20.0:
+			continue
+		# cabezo: un racimo de 4-14 corales/anémonas en ~5 m
+		for j in rng.randi_range(4, 14):
+			var cx := x + rng.randf_range(-5.0, 5.0)
+			var cz := z + rng.randf_range(-5.0, 5.0)
+			var cd := (
+				depth_img
+				. get_pixel(clampi(int(cx / w * (dn - 1)), 0, dn - 1), clampi(int(cz / h * (dn - 1)), 0, dn - 1))
+				. r
+			)
+			if cd < 0.8:
+				continue
+			var roll := rng.randf()
+			var kind := (
+				"brain" if roll < 0.4 else ("staghorn" if roll < 0.7 else ("table" if roll < 0.85 else "anemone"))
+			)
+			var key := Vector2i(int(cx / REEF_CELL), int(cz / REEF_CELL))
+			if not cells.has(key):
+				cells[key] = {}
+			if not cells[key].has(kind):
+				cells[key][kind] = []
+			var sc := rng.randf_range(0.6, 1.8) * (0.6 if kind == "anemone" else 1.0)
+			cells[key][kind].append([cx, -maxf(cd, 0.5) - 0.05, cz, rng.randf() * TAU, sc])
+	var holder := Node3D.new()
+	holder.name = "Arrecife"
+	root.add_child(holder)
+	var total := 0
+	for key: Vector2i in cells:
+		for kind: String in cells[key]:
+			var lst: Array = cells[key][kind]
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = true
+			mm.mesh = kinds[kind][0]
+			mm.instance_count = lst.size()
+			var org := Vector3(key.x * REEF_CELL, 0, key.y * REEF_CELL)
+			var pal: Array = palette[kind]
+			# sin esto el AABB del MultiMesh guardado queda en cero y se descarta al dibujar
+			mm.custom_aabb = AABB(Vector3(-4, -40, -4), Vector3(REEF_CELL + 8, 44, REEF_CELL + 8))
+			for k in lst.size():
+				var it: Array = lst[k]
+				var b := Basis(Vector3.UP, float(it[3])).scaled(Vector3.ONE * float(it[4]))
+				mm.set_instance_transform(k, Transform3D(b, Vector3(it[0], it[1], it[2]) - org))
+				mm.set_instance_color(k, pal[k % pal.size()])
+			var mmi := MultiMeshInstance3D.new()
+			mmi.name = "coral_%s_%d_%d" % [kind, key.x, key.y]
+			mmi.multimesh = mm
+			mmi.position = org
+			var m := ShaderMaterial.new()
+			m.shader = load("res://shaders/reef.gdshader")
+			m.set_shader_parameter(&"sway", kinds[kind][1])
+			mmi.material_override = m
+			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mmi.set_meta(&"detail_kind", "coral")
+			mmi.set_meta(&"detail_count", lst.size())
+			mmi.set_meta(&"detail_range", 90.0)
+			mmi.visibility_range_end = 90.0
+			mmi.set_script(DETAIL_LOD)
+			holder.add_child(mmi)
+			total += lst.size()
+	print("  arrecife: %d corales/anémonas" % total)
 
 
 ## Cables entre postes: cintas finas con catenaria, una malla por zona.
@@ -806,6 +913,7 @@ func _build(zid: String) -> void:
 	wm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(wm)
 	_landmarks(root, cols, meta)
+	_reef(root, dir, meta, img)
 	# palmeras (MultiMesh: un solo dibujo por zona)
 	var palms: Array = meta.palms
 	if not palms.is_empty():

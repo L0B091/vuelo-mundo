@@ -145,7 +145,8 @@ void fragment() {
 	ALBEDO = mix(col, srgb(vec3(0.96, 0.98, 1.0)), foam);
 	if (!FRONT_FACING) {
 		// visto desde abajo: superficie plateada/turquesa opaca (reflexión total interna)
-		ALBEDO = mix(srgb(vec3(0.10, 0.55, 0.62)), srgb(vec3(0.75, 0.92, 0.95)), 0.3 + 0.4 * foam);
+		// cerca del color de la niebla submarina: brillo suave arriba sin escalón con lo lejano
+		ALBEDO = mix(srgb(vec3(0.03, 0.30, 0.36)), srgb(vec3(0.6, 0.85, 0.9)), 0.16 + 0.4 * foam);
 		NORMAL = -NORMAL;
 	}
 	ALPHA = FRONT_FACING ? clamp(max(alpha, foam * 0.92), 0.0, 1.0) : 0.92;

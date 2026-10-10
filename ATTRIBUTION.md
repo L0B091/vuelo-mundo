@@ -82,3 +82,8 @@ Diseño original de superhéroe: no reproduce ningún personaje con derechos de 
 
 Mallas y animación procedurales, obra propia (`scripts/world/creature_meshes.gd`, `shaders/creature.gdshader`); sin modelos de terceros por ahora.
 Ubicaciones reales (referencias públicas de buceo/conservación): Lankan Manta Point (Lankanfinolhu, Atolón Malé Norte); Hanifaru Bay (Atolón Baa, Reserva de Biosfera UNESCO); South Ari Marine Protected Area (tiburón ballena); Banana Reef (Malé Norte). Una ubicación de tiburón ballena frente a Lankanfinolhu es **de juego, no documentada**, y está marcada así en `scripts/world/sea_life.gd`.
+
+## Corales y anémonas (obra propia)
+Modelos procedurales (`scripts/world/reef_meshes.gd`), colocados sobre la clase "Coral/Algae"
+(y parte de "Rock") del mapa bentónico del Allen Coral Atlas (CC BY 4.0, ver arriba).
+La ubicación de cada cabezo dentro de esas clases es aleatoria, no un relevamiento.

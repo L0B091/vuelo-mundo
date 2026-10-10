@@ -193,7 +193,7 @@ python3 fetch_assets.py       # texturas PBR + HDRI CC0 de Poly Haven -> assets/
 python3 make_generated_textures.py  # palmera, bandera, cartel publicitario (obra propia)
 python3 make_male.py          # Malé desde OSM -> data/sites/ (capas intermedias, no versionadas)
 python3 make_zone_index.py
-cd .. && godot --headless --script res://tools/gen_male.gd   # -> scenes/zones/mv_male_*.scn
+cd .. && xvfb-run -a godot --rendering-method mobile --script res://tools/gen_male.gd  # no --headless: pierde los MultiMesh   # -> scenes/zones/mv_male_*.scn
 ```
 
 ### Malé real

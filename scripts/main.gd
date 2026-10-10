@@ -8,6 +8,7 @@ extends Node3D
 ##   --walk                     (con --screenshot) aterriza antes de capturar (vista de peatón)
 ##   --character=male|female    personaje (si no, el guardado en user://character.tres)
 ##   --third-person             cámara en tercera persona
+##   --event=wait               (con --screenshot y --event-delay=s) espera antes de capturar
 ##   --event=takeoff|impact     (con --screenshot) captura el despegue o el impacto del aterrizaje
 ##   --event=trick:<nombre>     acrobacia (roll_left, loop, flip, spin, dodge_left...)
 ##   --event=boom               cruza la barrera del sonido
@@ -279,6 +280,9 @@ func _handle_cli(dt: float) -> void:
 				return
 			if ev.begins_with("trick:"):
 				avatar.trick(ev.substr(6))
+				_event_t = 0.0
+				return
+			if ev == "wait":  # deja pasar --event-delay segundos (fauna que se acerca, etc.)
 				_event_t = 0.0
 				return
 			if ev == "boom":
