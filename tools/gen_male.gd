@@ -799,6 +799,9 @@ func _build(zid: String) -> void:
 	wmat.set_shader_parameter(&"abs_lat", 4.17)
 	wmat.set_shader_parameter(&"foam_depth", 0.8)
 	wmat.set_shader_parameter(&"use_cut", false)
+	if ResourceLoader.exists(dir + "/geomorph.png"):
+		wmat.set_shader_parameter(&"geo_tex", load(dir + "/geomorph.png"))
+		wmat.set_shader_parameter(&"use_geo", true)
 	wm.material_override = wmat
 	wm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(wm)

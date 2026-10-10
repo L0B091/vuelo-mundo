@@ -5,6 +5,8 @@ Rasteriza las clases bentónicas (capa coral-atlas:benthic_data_verbose, bajada 
 fetch_aca.py benthic) en una textura de 512x512 que cubre el rectángulo de cada zona
 (origen NO, x este, y sur). R = clase: 0 sin dato, 1 arena, 2 pasto marino, 3 coral/alga,
 4 escombro, 5 roca, 6 microalgas. El sombreador del lecho elige material por clase.
+También geomorph.png (capa geomórfica): 1 cresta (rompiente), 2/3 planicie arrecifal
+exterior/interior, 4 talud, 5 talud interior, 6 laguna somera, 7 laguna profunda, 8 meseta.
 """
 import glob
 import gzip
@@ -20,9 +22,16 @@ N = 512
 CLASSES = {"Sand": 1, "Seagrass": 2, "Coral/Algae": 3, "Rubble": 4, "Rock": 5, "Microalgal Mats": 6}
 
 
-def load():
+GEO = {"Reef Crest": 1, "Outer Reef Flat": 2, "Inner Reef Flat": 3, "Terrestrial Reef Flat": 3,
+       "Reef Slope": 4, "Sheltered Reef Slope": 4, "Back Reef Slope": 5, "Shallow Lagoon": 6,
+       "Deep Lagoon": 7, "Plateau": 8}
+# orden de pintado: lo grande primero, la cresta (rompiente) encima de todo
+GEO_ORDER = [7, 8, 4, 5, 6, 3, 2, 1]
+
+
+def load(sub="aca_benthic"):
     feats = []
-    for f in sorted(glob.glob(str(RAW) + "/aca_benthic/*.json.gz")):
+    for f in sorted(glob.glob(str(RAW) + "/" + sub + "/*.json.gz")):
         feats += json.load(gzip.open(f))["features"]
     return feats
 
@@ -32,6 +41,38 @@ def rings(geom):
         yield geom["coordinates"]
     elif geom["type"] == "MultiPolygon":
         yield from geom["coordinates"]
+
+
+def raster(feats, z, table, order, fill_hole):
+    e0, n0 = z["origin"]
+    w, h = z["size"]
+    img = Image.new("L", (N, N), 0)
+    dr = ImageDraw.Draw(img)
+    fs = [f for f in feats if table.get(f["properties"].get("class_name")) and f.get("geometry")]
+    fs.sort(key=lambda f: order.index(table[f["properties"]["class_name"]]))
+    for f in fs:
+        c = table[f["properties"]["class_name"]]
+        for poly in rings(f["geometry"]):
+            pts = [((e - e0) / w * N, (n0 - n) / h * N) for e, n in (lonlat_to_global(a, b) for a, b in poly[0])]
+            xs = [p[0] for p in pts]
+            ys = [p[1] for p in pts]
+            if max(xs) < 0 or min(xs) > N or max(ys) < 0 or min(ys) > N:
+                continue
+            dr.polygon(pts, fill=c)
+            for hole in poly[1:]:
+                dr.polygon([((e - e0) / w * N, (n0 - n) / h * N) for e, n in
+                            (lonlat_to_global(a, b) for a, b in hole)], fill=fill_hole)
+    return img
+
+
+def main_geo(zones):
+    feats = []
+    for f in sorted(glob.glob(str(RAW) + "/aca/4.0_73.5*.json.gz")):
+        feats += json.load(gzip.open(f))["features"]
+    for z in zones:
+        img = raster(feats, z, GEO, GEO_ORDER, 0)
+        img.save(REPO / "data/sites" / z["id"] / "geomorph.png")
+        print(z["id"], "geomorfología", img.histogram()[:9])
 
 
 def main():
@@ -70,6 +111,7 @@ def main():
         img.save(out)
         hist = img.histogram()[:7]
         print(z["id"], "polígonos", cnt, "píxeles por clase", hist)
+    main_geo(zones)
 
 
 if __name__ == "__main__":

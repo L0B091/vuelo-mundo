@@ -32,6 +32,11 @@ uniform float abs_lat = 10.0;
 uniform float foam_depth = 1.5;
 uniform float wave_strength = 1.0;
 uniform float time_scale = 1.0;
+// Geomorfología del Allen Coral Atlas (solo micro-mapas): 1 = cresta de arrecife → rompiente
+// con espuma que pulsa con la ola; 2/3 = planicie arrecifal → turquesa claro; 6 = laguna
+// somera/bancos de arena → aguamarina brillante.
+uniform sampler2D geo_tex : filter_nearest, repeat_disable;
+uniform bool use_geo = false;
 
 const float P = 8192.0;
 const float TAU_ = 6.28318530718;
@@ -85,7 +90,9 @@ void fragment() {
 		vec2 dir = vec2(cos(ang), -sin(ang));
 		vec2 ab = round(dir * P / lam);
 		float kk = TAU_ / lam;
-		s += wave(g, ab, lam * 0.012, sqrt(9.81 * kk), t);
+		// sin moiré: cada onda se apaga cuando su longitud ya no se resuelve en pantalla
+		float vis = 1.0 - smoothstep(lam * 12.0, lam * 40.0, view_dist);
+		s += wave(g, ab, lam * 0.012 * vis, sqrt(9.81 * kk), t);
 	}
 	// las olas se calman en lagunas y se desvanecen a lo lejos (evita aliasing)
 	float calm = mix(0.35, 1.0, smoothstep(2.0, 30.0, d));
@@ -115,6 +122,20 @@ void fragment() {
 	float shore = 1.0 - smoothstep(0.0, foam_depth, d);
 	float brk = 0.5 + 0.5 * sin(dot(g, vec2(0.11, 0.07)) + t * 1.8 + s.z * 6.0);
 	float foam = shore * mix(0.55, 1.0, brk);
+	if (use_geo) {
+		vec2 jg = (vec2(sin(g.y * 0.21), cos(g.x * 0.19))) * 0.004;
+		int gc = int(texture(geo_tex, UV + jg).r * 255.0 + 0.5);
+		if (gc == 1) {
+			// rompiente: series de olas (período ~9 s) que llegan del océano y estallan en espuma
+			float set_ = 0.5 + 0.5 * sin(t * 0.7 + dot(g, vec2(0.013, 0.009)));
+			float lines = smoothstep(0.55, 1.0, sin(dot(g, vec2(0.35, 0.22)) - t * 2.2 + s.z * 4.0));
+			foam = max(foam, clamp(0.45 + 0.55 * lines, 0.0, 1.0) * mix(0.55, 1.0, set_));
+		} else if (gc == 2 || gc == 3) {
+			col = mix(col, srgb(vec3(0.42, 0.90, 0.84)), 0.45);
+		} else if (gc == 6) {
+			col = mix(col, srgb(vec3(0.50, 0.93, 0.88)), 0.3);
+		}
+	}
 
 	float alpha = mix(0.45, 0.97, smoothstep(0.0, 12.0, d));
 	alpha *= smoothstep(-0.6, 0.0, d);

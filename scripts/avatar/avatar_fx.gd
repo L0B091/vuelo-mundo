@@ -396,12 +396,13 @@ func _update_skim(_dt: float) -> void:
 	_was_skim_water = skim_water
 	# estela de espuma sobre el agua
 	if on and water:
-		_wake_pts.append(at)
+		if _wake_pts.is_empty() or at.distance_to(_wake_pts[-1]) > 1.5 * k:
+			_wake_pts.append(at)
 	elif not _wake_pts.is_empty():
 		_wake_pts.remove_at(0)
 	if not _wake_pts.is_empty() and at.distance_to(_wake_pts[-1]) > 400.0:
 		_wake_pts.clear()
-	while _wake_pts.size() > 60:
+	while _wake_pts.size() > 140:
 		_wake_pts.remove_at(0)
 	_wake_mesh.clear_surfaces()
 	if _wake_pts.size() < 2:
@@ -414,7 +415,7 @@ func _update_skim(_dt: float) -> void:
 		var dir := b - a
 		dir.y = 0.0
 		var side := Vector3(-dir.z, 0.0, dir.x).normalized() * (1.2 + 3.5 * (1.0 - float(i) / n2)) * k
-		var col := Color(0.97, 0.99, 1.0, 0.85 * float(i) / n2)
+		var col := Color(0.97, 0.99, 1.0, 0.9 * sqrt(float(i) / n2))
 		_wake_mesh.surface_set_color(col)
 		_wake_mesh.surface_add_vertex(a - side)
 		_wake_mesh.surface_set_color(col)

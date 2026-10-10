@@ -65,14 +65,14 @@ func apply() -> void:
 	var elev := sun_elevation(hour)
 	var az := lerpf(100.0, 260.0, clampf((hour - 6.0) / 12.0, 0.0, 1.0))  # este → oeste
 	sun.rotation_degrees = Vector3(-maxf(elev, -5.0), 180.0 - az, 0.0)
-	var low := 1.0 - smoothstep(4.0, 30.0, elev)  # amanecer/atardecer
+	var low := 1.0 - smoothstep(2.0, 22.0, elev)  # amanecer/atardecer
 	var night := 1.0 - smoothstep(-6.0, 3.0, elev)
-	var warm := Color(1.0, 0.62, 0.38).lerp(Color(1.0, 0.97, 0.92), 1.0 - low)
+	var warm := Color(1.0, 0.45, 0.2).lerp(Color(1.0, 0.97, 0.92), 1.0 - low)
 	var lightf: float = _mix["light"]
 	sun.light_color = warm
 	sun.light_energy = (1.0 - night) * lerpf(1.0, 0.55, low) * lightf
 	sun.visible = night < 0.98
-	var tint := Color(1, 1, 1).lerp(Color(1.0, 0.72, 0.55), low * 0.8) * lerpf(1.0, 0.75, 1.0 - lightf)
+	var tint := Color(1, 1, 1).lerp(Color(1.0, 0.58, 0.38), low) * lerpf(1.0, 0.75, 1.0 - lightf)
 	env.ambient_light_energy = lerpf(0.8, 0.12, night) * lerpf(1.0, 0.8, low)
 	var fogc := Color(fog_base.r * tint.r, fog_base.g * tint.g, fog_base.b * tint.b).lerp(
 		Color(0.02, 0.03, 0.06), night

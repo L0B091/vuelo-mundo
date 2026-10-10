@@ -62,6 +62,11 @@ void sky() {
 		vec3 cc = cloud_light * shade * mix(1.0, 0.55, smoothstep(0.6, 1.0, cloud_cover));
 		c = mix(c, cc * (1.0 - 0.9 * night), cov * smoothstep(0.0, 0.12, d.y));
 	}
+	// resplandor del ocaso: banda cálida en el horizonte hacia el sol (Rayleigh/Mie aproximado)
+	float sunlow = 1.0 - smoothstep(0.05, 0.4, sd.y);
+	float toward = pow(max(dot(normalize(d.xz + 1e-4), normalize(sd.xz + 1e-4)), 0.0), 2.0);
+	float band = exp(-max(d.y, 0.0) * 9.0);
+	c = mix(c, vec3(1.0, 0.42, 0.16) * 1.3, sunlow * band * (0.25 + 0.6 * toward) * (1.0 - night));
 	float t = smoothstep(-0.02, 0.06, d.y);
 	COLOR = mix(below_color, c, t);
 }
