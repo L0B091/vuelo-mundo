@@ -77,3 +77,8 @@ Diseño original de superhéroe: no reproduce ningún personaje con derechos de 
 |---|---|---|---|
 | "Beach Ocean Waves" (3 tomas de olas, Alkai beach) | jasinski — https://freesound.org/people/jasinski/sounds/18363/ , vía https://opengameart.org/content/beach-ocean-waves (subido por qubodup) | CC0 1.0 | `assets/audio/olas_playa_cc0.ogg` (concatenadas y pasadas a OGG Vorbis) |
 | Viento, burbujas, filtro submarino | obra propia (procedural, `AvatarFx` / `AmbientAudio`) | — | — |
+
+## Fauna marina
+
+Mallas y animación procedurales, obra propia (`scripts/world/creature_meshes.gd`, `shaders/creature.gdshader`); sin modelos de terceros por ahora.
+Ubicaciones reales (referencias públicas de buceo/conservación): Lankan Manta Point (Lankanfinolhu, Atolón Malé Norte); Hanifaru Bay (Atolón Baa, Reserva de Biosfera UNESCO); South Ari Marine Protected Area (tiburón ballena); Banana Reef (Malé Norte). Una ubicación de tiburón ballena frente a Lankanfinolhu es **de juego, no documentada**, y está marcada así en `scripts/world/sea_life.gd`.

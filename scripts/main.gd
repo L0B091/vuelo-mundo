@@ -140,6 +140,10 @@ func _ready() -> void:
 	uwfx.name = "UnderwaterFx"
 	add_child(uwfx)
 	uwfx.setup(avatar, tod)
+	var life := SeaLife.new()
+	life.name = "SeaLife"
+	add_child(life)
+	life.setup(world, avatar)
 	Quality.profile_changed.connect(func(_n: String) -> void: Quality.apply_to(get_viewport(), env, sun, avatar.camera))
 
 	if args.has("autotest"):
@@ -229,7 +233,7 @@ func _update_fog() -> void:
 	if tod != null:
 		end *= tod.fog_scale
 		if tod.underwater:
-			end = 45.0  # bajo el agua la visibilidad es de decenas de metros
+			end = 60.0  # bajo el agua la visibilidad es de decenas de metros
 	env.fog_depth_end = end
 	env.fog_depth_begin = end * 0.2
 	avatar.camera.far = end * 1.1
@@ -291,18 +295,6 @@ func _save_shot() -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	img.save_png(path)
 	print("captura guardada: ", path)
-	print(
-		"skim=",
-		avatar.skim,
-		" agl=",
-		avatar.agl,
-		" surf=",
-		avatar.surface,
-		" state=",
-		avatar.state,
-		" spd=",
-		avatar.speed
-	)
 	print(telemetry())
 	get_tree().quit()
 
