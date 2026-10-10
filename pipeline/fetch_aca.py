@@ -34,14 +34,22 @@ def get(params):
 
 
 def main():
-    out_dir = os.path.join(RAW, "aca")
+    global LAYER, LAT0, LAT1, LON0, LON1, STEP
+    sub = "aca"
+    if len(sys.argv) > 1 and sys.argv[1] == "benthic":
+        # clases bentónicas (arena, pasto marino, coral/alga, escombro, roca, microalgas) solo
+        # alrededor de los micro-mapas de Atolón Malé Norte: deciden los materiales del lecho
+        LAYER = "coral-atlas:benthic_data_verbose"
+        LAT0, LAT1, LON0, LON1, STEP = 4.10, 4.40, 73.45, 73.65, 0.05
+        sub = "aca_benthic"
+    out_dir = os.path.join(RAW, sub)
     os.makedirs(out_dir, exist_ok=True)
     lat = LAT0
     total = 0
     while lat < LAT1 - 1e-9:
         lon = LON0
         while lon < LON1 - 1e-9:
-            path = os.path.join(out_dir, "%.1f_%.1f.json.gz" % (lat, lon))
+            path = os.path.join(out_dir, "%.2f_%.2f.json.gz" % (lat, lon))
             if not os.path.exists(path):
                 # sin paginar: la capa no tiene clave primaria (GeoServer no puede ordenar)
                 d = get({
@@ -56,7 +64,7 @@ def main():
                 with gzip.open(path + ".tmp", "wt") as f:
                     json.dump({"type": "FeatureCollection", "features": feats}, f)
                 os.replace(path + ".tmp", path)
-                print("celda %.1f %.1f: %d polígonos" % (lat, lon, len(feats)), flush=True)
+                print("celda %.2f %.2f: %d polígonos" % (lat, lon, len(feats)), flush=True)
             total += 1
             lon += STEP
         lat += STEP

@@ -63,3 +63,10 @@ Diseño original de superhéroe: no reproduce ningún personaje con derechos de 
 | Godot Engine 4.7 | MIT |
 | GUT (Godot Unit Test) 9.7.1, en `addons/gut` | MIT (`addons/gut/LICENSE.md`) |
 | GDAL, NumPy, SciPy, Shapely, pyproj, Pillow (solo pipeline) | Licencias libres (MIT/BSD/Apache) |
+
+
+## Fondo marino (clases bentónicas)
+
+| Dato | Fuente | Licencia | Uso |
+|---|---|---|---|
+| Allen Coral Atlas — clases bentónicas (Sand, Seagrass, Coral/Algae, Rubble, Rock, Microalgal Mats), capa `coral-atlas:benthic_data_verbose` | Allen Coral Atlas (2022), Arizona State University et al., WFS público https://allencoralatlas.org/geoserver/ows (no la copia de Google Earth Engine) | CC BY 4.0 | `pipeline/make_benthic.py` → `data/sites/*/benthic.png`; decide el material del lecho de cada micro-mapa (`shaders/seabed.gdshader`). Cáusticas y oleaje son procedurales, obra propia. |
