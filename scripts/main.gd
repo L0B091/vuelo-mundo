@@ -94,6 +94,9 @@ func _ready() -> void:
 	index = ZoneIndex.load_from(ZONE_INDEX)
 	for e in index.validate():
 		push_error("Índice de zonas: " + e)
+	for z: ZoneInfo in index.zones.values():
+		if z.kind == "site":
+			tiles.site_rects.append(Rect2(z.origin_e, z.origin_n - z.size_n, z.size_e, z.size_n))
 	zones = ZoneStreamer.new()
 	zones.name = "ZoneStreamer"
 	add_child(zones)

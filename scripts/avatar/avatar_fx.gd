@@ -5,7 +5,6 @@ extends Node3D
 ## cámara, líneas de velocidad / distorsión de aire, estiramiento de FOV.
 
 const SH_RING := preload("res://shaders/shockwave.gdshader")
-const SH_CRATER := preload("res://shaders/crater.gdshader")
 const SH_LINES := preload("res://shaders/speed_lines.gdshader")
 const DUST_BY_PROFILE := {"low": 16, "medium": 48, "high": 110, "ultra": 180}
 
@@ -16,6 +15,7 @@ var _layer: CanvasLayer
 var _rings: Array = []  # [MeshInstance3D, t, dur]
 var _marks: Array = []  # [MeshInstance3D, t]
 var _dust_mat: StandardMaterial3D
+var _crack_tex: ImageTexture
 
 
 func setup(p_avatar: Avatar) -> void:
@@ -39,7 +39,7 @@ func setup(p_avatar: Avatar) -> void:
 func _prewarm() -> void:
 	var cam := avatar.camera
 	var nodes: Array[Node] = []
-	for sh: Shader in [SH_RING, SH_CRATER]:
+	for sh: Shader in [SH_RING]:
 		var mi := MeshInstance3D.new()
 		var q := QuadMesh.new()
 		q.size = Vector2(0.2, 0.2)
@@ -68,6 +68,41 @@ func _prewarm() -> void:
 		await get_tree().process_frame
 	for n in nodes:
 		n.queue_free()
+
+
+## Grietas radiales procedurales (se generan una vez; obra propia).
+func _crack_texture() -> ImageTexture:
+	if _crack_tex != null:
+		return _crack_tex
+	var n := 256
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var rnd := RandomNumberGenerator.new()
+	rnd.seed = 11
+	for c in 22:
+		var ang := rnd.randf() * TAU
+		var p := Vector2(n * 0.5, n * 0.5)
+		var ln := rnd.randf_range(0.35, 0.95) * n * 0.5
+		var stepv := 0.0
+		while stepv < ln:
+			ang += rnd.randf_range(-0.35, 0.35)
+			p += Vector2(cos(ang), sin(ang)) * 2.0
+			stepv += 2.0
+			var wid := int(lerpf(3.0, 1.0, stepv / ln))
+			for dx in range(-wid, wid + 1):
+				for dy in range(-wid, wid + 1):
+					var q := Vector2i(int(p.x) + dx, int(p.y) + dy)
+					if q.x >= 0 and q.y >= 0 and q.x < n and q.y < n:
+						img.set_pixelv(q, Color(0.06, 0.05, 0.05, 0.9))
+	for y in n:
+		for x in n:
+			var r := Vector2(x - n * 0.5, y - n * 0.5).length() / (n * 0.5)
+			if r < 0.3:
+				var a := (1.0 - r / 0.3) * 0.7
+				var cur := img.get_pixel(x, y)
+				img.set_pixel(x, y, Color(0.07, 0.06, 0.05, maxf(cur.a, a)))
+	_crack_tex = ImageTexture.create_from_image(img)
+	return _crack_tex
 
 
 func _dust_material() -> StandardMaterial3D:
@@ -138,18 +173,15 @@ func burst(ground_pos: Vector3, strength: float, crater: bool) -> void:
 	p.emitting = true
 	get_tree().create_timer(p.lifetime + 0.2).timeout.connect(p.queue_free)
 	if crater:
-		var mk := MeshInstance3D.new()
-		var mq := QuadMesh.new()
-		mq.size = Vector2(5.0, 5.0) * k * (0.6 + strength * 0.6)
-		mq.orientation = PlaneMesh.FACE_Y
-		mk.mesh = mq
-		var cm := ShaderMaterial.new()
-		cm.shader = SH_CRATER
-		mk.material_override = cm
-		mk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		get_parent().get_parent().add_child(mk)
-		mk.global_position = ground_pos + Vector3(0, 0.1 * k, 0)
-		_marks.append([mk, 0.0])
+		# marca de impacto: Decal proyectado sobre la calle (no depende del orden de transparencias)
+		var dc := Decal.new()
+		var w := 5.0 * k * (0.6 + strength * 0.6)
+		dc.size = Vector3(w, 1.5 * k, w)
+		dc.texture_albedo = _crack_texture()
+		dc.cull_mask = 0xFFFFF
+		get_parent().get_parent().add_child(dc)
+		dc.global_position = ground_pos
+		_marks.append([dc, 0.0])
 		while _marks.size() > 4:
 			(_marks.pop_front()[0] as Node).queue_free()
 	shake = maxf(shake, 0.35 + strength * 0.65)
@@ -168,8 +200,7 @@ func _process(dt: float) -> void:
 	for i in range(_marks.size() - 1, -1, -1):
 		var mk: Array = _marks[i]
 		mk[1] += dt
-		var f := 1.0 - smoothstep(6.0, 9.0, mk[1])
-		((mk[0] as MeshInstance3D).material_override as ShaderMaterial).set_shader_parameter(&"fade", f)
+		(mk[0] as Decal).albedo_mix = 1.0 - smoothstep(6.0, 9.0, mk[1])
 		if mk[1] > 9.0:
 			(mk[0] as Node).queue_free()
 			_marks.remove_at(i)

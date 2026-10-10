@@ -240,6 +240,9 @@ def bake_detail(stats):
     import lagoons
     lat_rows = [global_to_lonlat(oe, on - r * step)[1] for r in range(rows)]
     h, lag, _ = lagoons.correct(h, land, reef, ds, lat_rows, step)
+    # Maldivas es plana (máx. natural ~2.4 m; rellenos hasta ~3 m): ETOPO trae picos espurios
+    # de decenas de metros sobre islotes (artefactos), que se veían como mesetas de arena.
+    h = np.where(land == 1, np.clip(h, 1, 3), h).astype(h.dtype)
     # (ya no se talla el terreno bajo los micro-mapas: el shader recorta el conector dentro de
     # las zonas cargadas y el avatar ignora su colisión ahí)
     write_level(DETAIL_LEVEL, DETAIL_SAMPLES, h, land, i0, j0, ni, nj, stats)

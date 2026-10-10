@@ -120,7 +120,8 @@ static func build(path: String, step: int, tex_div: int, skirt_m: float, col_ste
 			var src: int = (r * tex_div) * n + c * tex_div
 			var h: float = heights[src]
 			var dv: float
-			if mask[src] == 0:
+			# arrecife sumergido (máscara de tierra pero bajo el nivel del mar): cuenta como agua
+			if mask[src] == 0 or h < 0.0:
 				dv = maxf(-h, 0.0)
 				has_water = true
 			else:

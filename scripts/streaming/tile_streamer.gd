@@ -38,6 +38,9 @@ var stats: Dictionary = {
 	"swapped_this_frame": false
 }
 
+## Rectángulos globales (e0, n_sur, ancho, alto) de los micro-mapas; los pone main.
+var site_rects: Array[Rect2] = []
+
 var _results: Array = []
 var _mutex := Mutex.new()
 var _terrain_mat: ShaderMaterial
@@ -201,10 +204,23 @@ func update(gp: GlobalPos, heading: Vector2, speed: float) -> void:
 		stats.slow_updates += 1
 
 
+func _touches_site(level: int, i: int, j: int) -> bool:
+	var sz := Geo.tile_size(level)
+	var r := Rect2(Geo.tile_origin_e(level, i), Geo.tile_origin_n(level, j) - sz, sz, sz)
+	for sr: Rect2 in site_rects:
+		if r.intersects(sr, true):
+			return true
+	return false
+
+
 func _request(key: String, level: int, i: int, j: int, parent: String, prof: Dictionary) -> void:
 	var is_detail: bool = level == detail_level
 	var step: int = int(prof.get("detail_mesh_step", 1)) if is_detail else 1
 	var tex_div: int = int(prof.get("water_tex_div", 1)) if is_detail else 1
+	if is_detail and _touches_site(level, i, j):
+		# junto a un micro-mapa la profundidad va a resolución completa: el agua propia de la
+		# zona empalma en el borde con la misma batimetría (sin línea de color)
+		tex_div = 1
 	var skirt: float = 400.0 if is_detail else 1500.0
 	var path := tile_path(level, i, j)
 	if not FileAccess.file_exists(path):
