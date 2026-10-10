@@ -70,3 +70,10 @@ Diseño original de superhéroe: no reproduce ningún personaje con derechos de 
 | Dato | Fuente | Licencia | Uso |
 |---|---|---|---|
 | Allen Coral Atlas — clases bentónicas (Sand, Seagrass, Coral/Algae, Rubble, Rock, Microalgal Mats), capa `coral-atlas:benthic_data_verbose` | Allen Coral Atlas (2022), Arizona State University et al., WFS público https://allencoralatlas.org/geoserver/ows (no la copia de Google Earth Engine) | CC BY 4.0 | `pipeline/make_benthic.py` → `data/sites/*/benthic.png`; decide el material del lecho de cada micro-mapa (`shaders/seabed.gdshader`). Cáusticas y oleaje son procedurales, obra propia. |
+
+## Sonido
+
+| Recurso | Autor / fuente | Licencia | Uso |
+|---|---|---|---|
+| "Beach Ocean Waves" (3 tomas de olas, Alkai beach) | jasinski — https://freesound.org/people/jasinski/sounds/18363/ , vía https://opengameart.org/content/beach-ocean-waves (subido por qubodup) | CC0 1.0 | `assets/audio/olas_playa_cc0.ogg` (concatenadas y pasadas a OGG Vorbis) |
+| Viento, burbujas, filtro submarino | obra propia (procedural, `AvatarFx` / `AmbientAudio`) | — | — |

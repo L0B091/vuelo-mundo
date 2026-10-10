@@ -132,6 +132,14 @@ func _ready() -> void:
 	tod.set_weather(str(args.get("weather", "clear")))
 	add_child(tod)
 	tod.setup(sun, env, env.sky.sky_material as ShaderMaterial, avatar.camera, FOG_COLOR)
+	var amb := AmbientAudio.new()
+	amb.name = "AmbientAudio"
+	add_child(amb)
+	amb.setup(avatar, tod)
+	var uwfx := UnderwaterFx.new()
+	uwfx.name = "UnderwaterFx"
+	add_child(uwfx)
+	uwfx.setup(avatar, tod)
 	Quality.profile_changed.connect(func(_n: String) -> void: Quality.apply_to(get_viewport(), env, sun, avatar.camera))
 
 	if args.has("autotest"):

@@ -31,6 +31,9 @@ const SOUND_SPEED := 343.0
 ## Vuelo rasante: por debajo de SKIM_ENTER m sobre el agua/suelo con velocidad, el asistente
 ## sigue el terreno a SKIM_HEIGHT m y un rayo hacia adelante tira para arriba ante obstáculos.
 const SKIM_ENTER := 9.0
+## Buceo: bajo el nivel del mar el vuelo pasa a nado (velocidad de nado, burbujas).
+const SWIM_MAX := 5.0
+const SWIM_BOOST := 11.0
 const SKIM_HEIGHT := 3.5
 const SKIM_MIN_SPEED := 30.0
 const TRICK_ACTIONS := {
@@ -86,6 +89,7 @@ var skim: float = 0.0
 ## Asistente de rasante y tirón automático (se puede apagar en opciones).
 var skim_assist: bool = true
 var pull_ups: int = 0
+var swimming: bool = false
 var _look_delta: Vector2 = Vector2.ZERO
 var _cam_dist: float = 4.0
 var _landing_rate: float = 0.0
@@ -267,7 +271,8 @@ func _update_camera(dt: float) -> void:
 
 
 func _fly(dt: float, k: float) -> void:
-	var vmax := BOOST_SPEED if boost else MAX_SPEED
+	swimming = position.y < -0.6 * k_now()
+	var vmax := (SWIM_BOOST if boost else SWIM_MAX) if swimming else (BOOST_SPEED if boost else MAX_SPEED)
 	var thr := Input.get_action_strength("throttle_up") - Input.get_action_strength("throttle_down")
 	# curva de aceleración: fuerte al arrancar, se suaviza cerca del máximo; el turbo empuja más
 	var near := clampf(speed / vmax, 0.0, 1.0)
@@ -301,6 +306,8 @@ func _fly(dt: float, k: float) -> void:
 		+ pilot_stick.y
 	)
 	var climb_max := clampf(maxf(8.0, speed * 0.4), 8.0, 300.0)
+	if swimming:
+		climb_max = 4.0  # nado: subir/bajar lento
 	var target_climb := clampf(c, -1.0, 1.0) * climb_max
 	target_climb = _skim_assist(target_climb, c, climb_max, k)
 	if _takeoff_t > 0.0:
@@ -323,8 +330,9 @@ func _fly(dt: float, k: float) -> void:
 		var right := Vector3(h.y, 0.0, h.x)
 		velocity += (right * acro.vel_local.x + Vector3.UP * acro.vel_local.y + fwd * acro.vel_local.z) * k
 	move_and_slide()
-	# no hundirse en el mar ni salir del techo
-	if position.y < 2.0 * k:
+	# no hundirse en el mar por accidente a alta velocidad; lento sobre el agua se puede bucear
+	var can_dive := surface == "agua" and (speed < 40.0 or swimming)
+	if position.y < 2.0 * k and not can_dive:
 		position.y = 2.0 * k
 		climb = maxf(climb, 0.0)
 	if position.y > MAX_ALT:
@@ -341,7 +349,7 @@ func _fly(dt: float, k: float) -> void:
 func _skim_assist(target_climb: float, c: float, climb_max: float, k: float) -> float:
 	var near := agl < SKIM_ENTER * 1.6 and speed > SKIM_MIN_SPEED
 	skim = lerpf(skim, (1.0 - clampf((agl - 1.0) / SKIM_ENTER, 0.0, 1.0)) if near else 0.0, 0.15)
-	if not skim_assist or acro.active():
+	if not skim_assist or acro.active() or swimming or position.y < 0.5:
 		return target_climb
 	if agl < SKIM_ENTER and speed > SKIM_MIN_SPEED and absf(c) < 0.2:
 		target_climb = clampf((SKIM_HEIGHT - agl) * 2.5, -12.0, climb_max)
@@ -372,6 +380,10 @@ func _skim_assist(target_climb: float, c: float, climb_max: float, k: float) -> 
 				target_climb = minf(maxf(need, target_climb), 300.0)
 				climb = maxf(climb, minf(need, climb + climb_max * 0.5))
 	return target_climb
+
+
+func k_now() -> float:
+	return scale_k()
 
 
 func _supersonic_check() -> void:

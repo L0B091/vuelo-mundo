@@ -83,6 +83,10 @@ func apply() -> void:
 		fogc = Color(0.03, 0.32, 0.38).lerp(Color(0.01, 0.04, 0.08), night)
 		env.ambient_light_energy *= 0.7
 	env.fog_light_color = fogc
+	# bajo el agua no se ve el cielo: fondo del color del agua (la superficie la dibuja el mar)
+	env.background_mode = Environment.BG_COLOR if underwater else Environment.BG_SKY
+	env.background_color = fogc
+	env.background_energy_multiplier = 2.4 if underwater else 1.0  # iguala el color de la niebla
 	fog_scale = 1.0 / float(_mix["fog"])  # main acorta la niebla de profundidad con esto
 	if sky_mat != null:
 		sky_mat.set_shader_parameter(&"sky_tint", Vector3(tint.r, tint.g, tint.b))
