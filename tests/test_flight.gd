@@ -112,3 +112,35 @@ func test_trick_only_in_flight_and_draws_trail() -> void:
 	for i in 90:
 		av.acro.step(1.0 / 60.0)
 	assert_false(av.trick("loop"), "caminando no hay acrobacias")
+
+
+func test_skim_assist_holds_a_few_meters_over_water() -> void:
+	var av := _flyer()
+	av.position.y = 6.0
+	av.speed = 120.0
+	for i in 300:
+		av._physics_process(1.0 / 60.0)
+	assert_eq(av.surface, "agua")
+	assert_between(av.agl, 2.0, 6.0, "sigue el agua a unos metros")
+	assert_gt(av.skim, 0.4)
+
+
+func test_auto_pull_up_avoids_wall() -> void:
+	var av := _flyer()
+	av.position = Vector3(0, 4, 0)
+	av.heading_deg = 0.0  # norte = -Z
+	av.speed = 80.0
+	var wall := StaticBody3D.new()
+	wall.collision_layer = Avatar.LAYER_BUILDINGS
+	var cs := CollisionShape3D.new()
+	var bx := BoxShape3D.new()
+	bx.size = Vector3(60, 20, 2)
+	cs.shape = bx
+	wall.add_child(cs)
+	wall.position = Vector3(0, 10, -120)
+	add_child_autofree(wall)
+	await get_tree().physics_frame
+	for i in 150:
+		av._physics_process(1.0 / 60.0)
+	assert_gt(av.pull_ups, 0, "avisa y tira hacia arriba")
+	assert_gt(av.position.y, 20.0, "pasa por encima del muro (20 m)")

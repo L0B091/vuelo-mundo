@@ -28,6 +28,11 @@ const YAW_RATE := 55.0
 const LAND_RAY := 400.0
 const MAX_ALT := 20000.0
 const SOUND_SPEED := 343.0
+## Vuelo rasante: por debajo de SKIM_ENTER m sobre el agua/suelo con velocidad, el asistente
+## sigue el terreno a SKIM_HEIGHT m y un rayo hacia adelante tira para arriba ante obstáculos.
+const SKIM_ENTER := 9.0
+const SKIM_HEIGHT := 3.5
+const SKIM_MIN_SPEED := 30.0
 const TRICK_ACTIONS := {
 	"trick_roll_left": "roll_left",
 	"trick_roll_right": "roll_right",
@@ -74,6 +79,13 @@ var fp_roll_limit: float = 12.0
 var fp_trick_scale: float = 0.5
 var turbulence: Vector2 = Vector2.ZERO  # sacudida suave de la vista (grados)
 var supersonic_count: int = 0
+## "agua" | "tierra": qué hay debajo (agua = sin suelo o lecho bajo el nivel del mar).
+var surface: String = "agua"
+## 0..1: qué tan "rasante" se está volando (efectos: espuma, polvo, sacudida, viento).
+var skim: float = 0.0
+## Asistente de rasante y tirón automático (se puede apagar en opciones).
+var skim_assist: bool = true
+var pull_ups: int = 0
 var _look_delta: Vector2 = Vector2.ZERO
 var _cam_dist: float = 4.0
 var _landing_rate: float = 0.0
@@ -289,6 +301,7 @@ func _fly(dt: float, k: float) -> void:
 	)
 	var climb_max := clampf(maxf(8.0, speed * 0.4), 8.0, 300.0)
 	var target_climb := clampf(c, -1.0, 1.0) * climb_max
+	target_climb = _skim_assist(target_climb, c, climb_max, k)
 	if _takeoff_t > 0.0:
 		_takeoff_t -= dt
 		target_climb = maxf(target_climb, 22.0)
@@ -321,6 +334,45 @@ func _fly(dt: float, k: float) -> void:
 		_enter_walk()
 
 
+## Asistente de vuelo rasante: mantiene unos metros sobre agua, suelo, techos y muelles si
+## el jugador no pide subir/bajar, y tira hacia arriba ante un choque inminente (mirando
+## hacia adelante el tiempo de reacción: ~1.1 s a la velocidad actual).
+func _skim_assist(target_climb: float, c: float, climb_max: float, k: float) -> float:
+	var near := agl < SKIM_ENTER * 1.6 and speed > SKIM_MIN_SPEED
+	skim = lerpf(skim, (1.0 - clampf((agl - 1.0) / SKIM_ENTER, 0.0, 1.0)) if near else 0.0, 0.15)
+	if not skim_assist or acro.active():
+		return target_climb
+	if agl < SKIM_ENTER and speed > SKIM_MIN_SPEED and absf(c) < 0.2:
+		target_climb = clampf((SKIM_HEIGHT - agl) * 2.5, -12.0, climb_max)
+	# tirón automático: rayo hacia adelante y abajo a la altura del cuerpo
+	if speed > 15.0:
+		var h := heading_vec()
+		var fwd := Vector3(h.x, 0.0, -h.y)
+		var look := clampf(speed * 1.1, 8.0, 400.0) * k
+		var from := global_position + Vector3(0, 0.6 * k, 0)
+		var q := PhysicsRayQueryParameters3D.create(
+			from, from + fwd * look + Vector3(0, climb * 1.1 * k, 0), collision_mask, [get_rid()]
+		)
+		var hit := get_world_3d().direct_space_state.intersect_ray(q)
+		var danger := not hit.is_empty() or (agl < 1.2 and climb < 0.0)
+		if danger:
+			var need := 0.0
+			if not hit.is_empty():
+				# subir lo suficiente para pasar por encima (con margen) antes de llegar
+				var top := (hit.position as Vector3).y / k + 4.0
+				var t := maxf(from.distance_to(hit.position as Vector3) / k / maxf(speed, 1.0), 0.15)
+				need = (top - position.y / k) / t
+			else:
+				need = 6.0
+			if need > target_climb:
+				if need > 2.0 and target_climb < need - 5.0 and climb < need * 0.5:
+					pull_ups += 1
+					message.emit("¡Arriba!")
+				target_climb = minf(maxf(need, target_climb), 300.0)
+				climb = maxf(climb, minf(need, climb + climb_max * 0.5))
+	return target_climb
+
+
 func _supersonic_check() -> void:
 	var sup := speed >= SOUND_SPEED
 	if sup and not _was_supersonic:
@@ -336,6 +388,7 @@ func _supersonic_check() -> void:
 func _turbulence(dt: float) -> void:
 	_turb_t += dt
 	var amp := smoothstep(40.0, 900.0, speed) * 0.55 + (0.25 if agl < 60.0 and speed > 80.0 else 0.0)
+	amp += skim * smoothstep(30.0, 300.0, speed) * 0.9  # rasante: el suelo "pasa" cerca
 	var tt := _turb_t
 	var want := Vector2(sin(tt * 1.7) + sin(tt * 3.1 + 1.0) * 0.5, sin(tt * 2.3 + 0.4) + sin(tt * 4.7) * 0.4) * amp
 	turbulence = turbulence.lerp(want, clampf(dt * 4.0, 0.0, 1.0))
@@ -471,7 +524,9 @@ func _probe_ground() -> void:
 	if hit.is_empty():
 		agl = maxf(position.y, 0.0) / scale_k()  # sobre el mar
 		ground_kind = ""
+		surface = "agua"
 		return
+	surface = "agua" if (hit.position as Vector3).y < 0.15 * scale_k() else "tierra"
 	agl = (global_position.y - (hit.position as Vector3).y) / scale_k()
 	var col: CollisionObject3D = hit.collider
 	ground_kind = "caminable" if col != null and (col.collision_layer & LAYER_WALKABLE) != 0 else "terreno"
