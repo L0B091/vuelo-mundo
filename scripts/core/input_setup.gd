@@ -13,6 +13,7 @@ const ACTIONS: Dictionary = {
 	"takeoff": [KEY_T],
 	"run": [KEY_SHIFT],
 	"boost": [KEY_B],
+	"camera_toggle": [KEY_C],
 }
 
 

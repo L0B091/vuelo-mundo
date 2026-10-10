@@ -11,6 +11,11 @@ var go: Button
 var _bench_root: Node3D
 var _bench_t: float = -1.0
 var _bench_frames: int = 0
+var _shot_path: String = ""
+var _shot_frames: int = 0
+var _cdef: CharacterDef
+var _preview: AvatarBody
+var _pv_pivot: Node3D
 
 
 func _ready() -> void:
@@ -24,6 +29,9 @@ func _ready() -> void:
 		):
 			get_tree().call_deferred("change_scene_to_file", MAIN_SCENE)
 			return
+	for a in args:
+		if a.begins_with("--boot-screenshot="):
+			_shot_path = a.substr(18)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var bg := ColorRect.new()
 	bg.color = Color(0.04, 0.18, 0.32)
@@ -31,13 +39,13 @@ func _ready() -> void:
 	add_child(bg)
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_CENTER)
-	box.position = Vector2(-320, -220)
-	box.size = Vector2(640, 440)
+	box.position = Vector2(-320, -340)
+	box.size = Vector2(640, 680)
 	box.add_theme_constant_override("separation", 14)
 	add_child(box)
 	var title := Label.new()
 	title.text = "Vuelo Mundo"
-	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_font_size_override("font_size", 40)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 	info = Label.new()
@@ -52,6 +60,7 @@ func _ready() -> void:
 	option.item_selected.connect(_on_option)
 	option.add_theme_font_size_override("font_size", 22)
 	box.add_child(option)
+	_build_character_select(box)
 	go = Button.new()
 	go.text = "Despegar sobre Maldivas"
 	go.add_theme_font_size_override("font_size", 26)
@@ -61,6 +70,69 @@ func _ready() -> void:
 	_refresh()
 	if Quality.needs_benchmark() and DisplayServer.get_name() != "headless":
 		_start_benchmark()
+
+
+## Selección de personaje (masculino / femenino) con vista previa 3D girando.
+func _build_character_select(box: VBoxContainer) -> void:
+	_cdef = CharacterDef.load_or_default()
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	var svc := SubViewportContainer.new()
+	svc.custom_minimum_size = Vector2(260, 300)
+	svc.stretch = true
+	row.add_child(svc)
+	var sv := SubViewport.new()
+	sv.own_world_3d = true
+	sv.transparent_bg = true
+	svc.add_child(sv)
+	var cam := Camera3D.new()
+	cam.position = Vector3(0, 1.05, 3.1)
+	cam.fov = 40
+	sv.add_child(cam)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-35, 30, 0)
+	sv.add_child(light)
+	var env := WorldEnvironment.new()
+	env.environment = Environment.new()
+	env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.environment.ambient_light_color = Color(0.6, 0.65, 0.75)
+	sv.add_child(env)
+	_pv_pivot = Node3D.new()
+	sv.add_child(_pv_pivot)
+	_preview = AvatarBody.new()
+	_preview.rotation_degrees.y = 180.0
+	_pv_pivot.add_child(_preview)
+	_preview.setup(_cdef)
+	var col := VBoxContainer.new()
+	row.add_child(col)
+	var lbl := Label.new()
+	lbl.text = "Personaje"
+	lbl.add_theme_font_size_override("font_size", 24)
+	col.add_child(lbl)
+	for kind: Array in [["male", "Masculino"], ["female", "Femenino"]]:
+		var b := Button.new()
+		b.name = "Btn_" + str(kind[0])
+		b.text = kind[1]
+		b.toggle_mode = true
+		b.button_pressed = _cdef.body == kind[0]
+		b.custom_minimum_size = Vector2(220, 64)
+		b.add_theme_font_size_override("font_size", 24)
+		b.pressed.connect(_select_character.bind(str(kind[0]), col))
+		col.add_child(b)
+	var note := Label.new()
+	note.text = "Colores, peinado y accesorios:\npersonalizables (CharacterDef)"
+	note.add_theme_font_size_override("font_size", 14)
+	col.add_child(note)
+
+
+func _select_character(kind: String, col: VBoxContainer) -> void:
+	_cdef = CharacterDef.preset(kind)
+	_cdef.save()
+	for b: Node in col.get_children():
+		if b is Button:
+			(b as Button).button_pressed = b.name == "Btn_" + kind
+	_preview.setup(_cdef)
 
 
 func _on_option(i: int) -> void:
@@ -115,6 +187,16 @@ func _start_benchmark() -> void:
 
 
 func _process(dt: float) -> void:
+	if _pv_pivot != null:
+		_pv_pivot.rotate_y(dt * 0.6)
+	if _preview != null:
+		_preview.drive(Avatar.State.WALK, 0.0, 0.0, false, dt)
+	if _shot_path != "":
+		_shot_frames += 1
+		if _shot_frames == 120:
+			get_viewport().get_texture().get_image().save_png(_shot_path)
+			print("captura guardada: ", _shot_path)
+			get_tree().quit()
 	if _bench_t < 0.0:
 		return
 	_bench_t += dt

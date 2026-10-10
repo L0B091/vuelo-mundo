@@ -11,6 +11,7 @@ var stick: VirtualStick
 var throttle: VSlider
 var btn_land: Button
 var btn_boost: Button
+var btn_cam: Button
 var btn_up: Button
 var btn_down: Button
 var look_pad: Control
@@ -71,6 +72,11 @@ func _ready() -> void:
 	btn_boost = _button(root, "Turbo", Vector2(-330, -300))
 	btn_boost.toggle_mode = true
 	btn_boost.toggled.connect(func(on: bool) -> void: avatar.boost = on)
+	# cámara: primera persona (por defecto) / tercera persona
+	btn_cam = _button(root, "3ª", Vector2(-330, -400))
+	btn_cam.name = "BtnCamara"
+	btn_cam.pressed.connect(avatar.toggle_camera)
+	avatar.camera_mode_changed.connect(func(tp: bool) -> void: btn_cam.text = "1ª" if tp else "3ª")
 
 
 func _button(parent: Control, text: String, pos: Vector2) -> Button:

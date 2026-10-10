@@ -230,6 +230,28 @@ El APK se exporta sin errores, pero **todavía no se probó en un teléfono real
 
 ---
 
+## Personaje y vuelo de superhéroe
+
+- **Selección masculino/femenino** en la pantalla de inicio (vista previa 3D girando). La elección
+  se guarda en `user://character.tres` (`CharacterDef`: cuerpo, altura, colores del traje y de
+  los acentos, piel, peinado `none/short/long/bun`, accesorios `cape/belt/wristbands`). La malla
+  base es intercambiable (`base_scene`): cualquier glTF con el esqueleto del Universal Animation
+  Library de Quaternius (CC0).
+- **Animaciones:** quieto, caminar, correr (Shift), vuelo y aterrizaje, sobre las del UAL.
+- **Poses de vuelo** (`FlightPose`, un `SkeletonModifier3D` propio): flotación erguida, crucero con
+  los brazos hacia atrás, puño adelante a máxima velocidad (turbo o > 300 m/s), despegue con los
+  brazos arriba y aterrizaje pesado en cuclillas con el puño al suelo.
+- **Efectos:** despegue explosivo (salida a 26 m/s, onda expansiva y polvo), aterrizaje pesado
+  (descenso rápido, onda, polvo, grietas en el suelo, sacudida de cámara), líneas de velocidad con
+  distorsión de aire (distorsión solo en perfiles alto/ultra) y FOV que se estira hasta +30° con
+  la velocidad. El polvo escala por perfil (16/48/110/180 partículas). Los shaders de efectos se
+  precompilan al empezar para que el primer despegue no tenga tirón.
+- **Cámara:** primera persona por defecto; botón táctil "3ª/1ª" (tecla C) para tercera persona,
+  con brazo de cámara que no atraviesa paredes. En primera persona el cuerpo no se dibuja pero da
+  sombra.
+- Línea de comandos: `--character=male|female`, `--third-person`, `--cam-orbit=grados`,
+  `--event=takeoff|impact` (captura del despegue o del impacto).
+
 ## Pendiente / problemas conocidos
 
 - **Malé: aspecto.** Es reconocible por el trazado, los hitos y la densidad, pero está lejos

@@ -40,6 +40,17 @@ Lista mantenida en `assets/ASSETS.json` (la escribe `pipeline/fetch_assets.py`).
 
 Mapa en el juego: «© OpenStreetMap contributors, NOAA NCEI ETOPO 2022, Natural Earth, Allen Coral Atlas (CC BY 4.0)».
 
+## Personaje (malla base y animaciones)
+
+| Recurso | Autor | Licencia | Fuente | Uso |
+|---|---|---|---|---|
+| Universal Animation Library (versión estándar gratuita, glTF "Godot Standard": maniquí con esqueleto Rigify + 45 animaciones) | Quaternius | CC0 1.0 | https://quaternius.com/packs/universalanimationlibrary.html — copia glTF publicada en https://github.com/J-Ponzo/gltf-universal-animation-library (redistribución del archivo de itch.io, 2025-06-10) | Malla base de ambos personajes; animaciones Idle, Walk, Sprint, Jump, Jump_Land |
+
+Las poses de vuelo (despegue, crucero con brazos atrás, puño adelante, flotación erguida y
+aterrizaje pesado), el pelo, la capa, el cinturón, los colores y todos los efectos (onda
+expansiva, polvo, marca de impacto, líneas de velocidad) son obra propia del proyecto (CC0).
+Diseño original de superhéroe: no reproduce ningún personaje con derechos de autor.
+
 ## Software
 
 | Componente | Licencia |

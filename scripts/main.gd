@@ -6,6 +6,10 @@ extends Node3D
 ##   --speed=m/s                 velocidad inicial
 ##   --screenshot=ruta.png       guarda una captura cuando el streaming termina y sale
 ##   --walk                     (con --screenshot) aterriza antes de capturar (vista de peatón)
+##   --character=male|female    personaje (si no, el guardado en user://character.tres)
+##   --third-person             cámara en tercera persona
+##   --event=takeoff|impact     (con --screenshot) captura el despegue o el impacto del aterrizaje
+##   --event-delay=s            segundos después del evento (0.2)
 ##   --pitch=grados             inclinación inicial de la mirada (negativo = abajo)
 ##   --profile=low|medium|high|ultra  fuerza un perfil sin guardarlo
 ##   --hide-hud                  oculta el HUD (capturas limpias)
@@ -35,6 +39,7 @@ var _prev_zones_ms: float = 0.0
 var _prev_swapped: bool = false
 
 var _idle_frames: int = 0
+var _event_t: float = -1.0
 var _elapsed: float = 0.0
 
 
@@ -73,6 +78,13 @@ func _ready() -> void:
 	avatar.speed = float(args.get("speed", "90"))
 	if args.has("pitch"):
 		avatar.look_pitch = float(args.pitch)
+	var cdef := CharacterDef.load_or_default()
+	if args.has("character"):
+		cdef = CharacterDef.preset(str(args.character))
+	avatar.set_character(cdef)
+	if args.has("third-person"):
+		avatar.toggle_camera()
+	avatar.cam_orbit_deg = float(args.get("cam-orbit", "0"))
 
 	tiles = TileStreamer.new()
 	tiles.name = "TileStreamer"
@@ -191,7 +203,7 @@ func _update_fog() -> void:
 	avatar.camera.far = end * 1.1
 
 
-func _handle_cli(_dt: float) -> void:
+func _handle_cli(dt: float) -> void:
 	if args.has("quit-after") and _elapsed > float(args["quit-after"]):
 		print(telemetry())
 		get_tree().quit()
@@ -204,17 +216,42 @@ func _handle_cli(_dt: float) -> void:
 		for id: String in zones.live:
 			if zones.live[id].state == "loading":
 				zones_idle = false
-		if args.has("walk") and avatar.state == Avatar.State.FLY and zones_idle and _elapsed > 1.0:
+		var ev := str(args.get("event", ""))
+		if (
+			(args.has("walk") or ev == "impact")
+			and avatar.state == Avatar.State.FLY
+			and zones_idle
+			and _elapsed > 1.0
+			and _event_t < 0.0
+		):
 			avatar.request_land()
+			if ev == "impact":
+				_event_t = 0.0
+		if _event_t >= 0.0:
+			# captura de un instante (despegue / impacto): se toma unos cuadros después del evento
+			if ev == "impact" and avatar.state != Avatar.State.WALK:
+				return
+			_event_t += dt
+			if _event_t >= float(args.get("event-delay", "0.2")):
+				_save_shot()
+			return
 		_idle_frames = _idle_frames + 1 if tiles.is_idle() and zones_idle and _elapsed > 1.0 else 0
 		if _idle_frames == 90:
-			var img := get_viewport().get_texture().get_image()
-			var path := str(args.screenshot)
-			DirAccess.make_dir_recursive_absolute(path.get_base_dir())
-			img.save_png(path)
-			print("captura guardada: ", path)
-			print(telemetry())
-			get_tree().quit()
+			if ev == "takeoff":
+				avatar.request_takeoff()
+				_event_t = 0.0
+				return
+			_save_shot()
+
+
+func _save_shot() -> void:
+	var img := get_viewport().get_texture().get_image()
+	var path := str(args.screenshot)
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	img.save_png(path)
+	print("captura guardada: ", path)
+	print(telemetry())
+	get_tree().quit()
 
 
 func telemetry() -> String:
