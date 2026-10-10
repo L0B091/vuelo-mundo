@@ -26,7 +26,9 @@ var report: Dictionary = {
 	"walk_cross_ok": false,
 	"landed": false,
 	"took_off": false,
-	"unloaded_after_leave": false
+	"unloaded_after_leave": false,
+	"resort_landed": false,
+	"resort_walk_ok": false
 }
 var _last_y: float = NAN
 var _walk_start: GlobalPos
@@ -75,7 +77,7 @@ func _physics_process(dt: float) -> void:
 				% [phase, total, gp, a.agl, a.speed, a.state, gp.horizontal_distance_to(target)]
 			)
 		)
-	if total > 400.0:
+	if total > 700.0:
 		_finish("tiempo agotado en fase " + phase)
 		return
 	match phase:
@@ -85,15 +87,18 @@ func _physics_process(dt: float) -> void:
 				a.boost = false
 				a.speed = 250.0
 				_set_phase("aproximacion")
-		"aproximacion":
+		"aproximacion", "vuelo_resort":
 			var dx: float = Geo.delta_e(target.e, gp.e)
 			var dn: float = target.n - gp.n
 			var dist: float = sqrt(dx * dx + dn * dn)
 			a.heading_deg = fposmod(rad_to_deg(atan2(dx, dn)), 360.0)
 			a.speed = clampf(dist / 6.0, 0.0, 250.0) if dist > 1.5 else 0.0
 			var want_alt: float = 60.0 if dist > 200.0 else 25.0
+			if phase == "vuelo_resort":
+				a.speed = clampf(dist / 5.0, 0.0, 300.0) if dist > 1.0 else 0.0
+				want_alt = 90.0 if dist > 400.0 else 12.0
 			a.pilot_climb = clampf((want_alt - a.agl) / 30.0, -1.0, 1.0)
-			if dist < 4.0 and a.agl < 40.0:
+			if dist < (4.0 if phase == "aproximacion" else 1.5) and a.agl < 40.0:
 				a.pilot_climb = 0.0
 				print(
 					(
@@ -102,7 +107,7 @@ func _physics_process(dt: float) -> void:
 					)
 				)
 				a.request_land()
-				_set_phase("aterrizaje")
+				_set_phase("aterrizaje" if phase == "aproximacion" else "aterrizaje_villa")
 		"aterrizaje":
 			if a.state == Avatar.State.WALK:
 				report.landed = true
@@ -146,11 +151,51 @@ func _physics_process(dt: float) -> void:
 				a.pilot_climb = 1.0
 				if a.agl > 80.0:
 					a.pilot_climb = 0.0
-					a.heading_deg = 90.0
-					a.speed = 300.0
-					_set_phase("alejamiento")
+					if not report.resort_landed:
+						# Malé -> resort (Lankanfinolhu, ~13 km al NE) volando en el mismo espacio
+						target = main.index.get_zone("mv_lankanfinolhu").landing
+						_set_phase("vuelo_resort")
+					else:
+						a.heading_deg = 90.0
+						a.speed = 300.0
+						_set_phase("alejamiento")
+		"aterrizaje_villa":
+			if a.state == Avatar.State.WALK:
+				report.resort_landed = true
+				report["resort_landing_error_m"] = snappedf(a.global_pos().horizontal_distance_to(target), 0.01)
+				report["resort_ground"] = a.ground_kind
+				_walk_start = a.global_pos()
+				_wp = 1
+				_set_phase("caminata_muelle")
+			elif a.state == Avatar.State.FLY and t > 1.0:
+				_finish("aterrizaje en la villa rechazado")
+			elif t > 30.0:
+				_finish("no tocó la terraza de la villa")
+		"caminata_muelle":
+			var rpts: Array = main.index.get_zone("mv_lankanfinolhu").test_walk
+			while _wp < rpts.size() and gp.horizontal_distance_to(GlobalPos.new(rpts[_wp][0], rpts[_wp][1], 0.0)) < 2.0:
+				_wp += 1
+			if a.state != Avatar.State.WALK:
+				_finish("cayó del muelle")
+				return
+			if not is_nan(_last_y):
+				report.max_step_y = maxf(report.max_step_y, absf(a.position.y - _last_y))
+			_last_y = a.position.y
+			if _wp >= rpts.size():
+				report.resort_walk_ok = true
+				report["resort_walked_m"] = snappedf(a.global_pos().horizontal_distance_to(_walk_start), 0.01)
+				a.pilot_stick = Vector2.ZERO
+				a.request_takeoff()
+				_set_phase("despegue")
+			else:
+				var rdx: float = Geo.delta_e(float(rpts[_wp][0]), gp.e)
+				var rdn: float = float(rpts[_wp][1]) - gp.n
+				a.heading_deg = fposmod(rad_to_deg(atan2(rdx, rdn)), 360.0)
+				a.pilot_stick = Vector2(0, 0.6)
+				if t > 90.0:
+					_finish("no terminó el recorrido del muelle")
 		"alejamiento":
-			if main.zones.live_ids().size() == 0 and main.zones.stats.unloaded >= 2:
+			if main.zones.live_ids().size() == 0 and main.zones.stats.unloaded >= 3:
 				report.unloaded_after_leave = true
 				_finish("")
 			elif t > 60.0:
@@ -182,6 +227,8 @@ func _finish(fail_reason: String) -> void:
 		and report.landed
 		and report.walk_cross_ok
 		and report.took_off
+		and report.resort_landed
+		and report.resort_walk_ok
 		and report.max_step_y < 0.05
 		and report.detail_swaps > 0
 		and report.max_swap_frame_ms < SWAP_FRAME_BUDGET_MS

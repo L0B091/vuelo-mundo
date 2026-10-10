@@ -1,0 +1,13 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/coast_sand_01/coast_sand_01_diff.jpg" id="1_qcop1"]
+[ext_resource type="Texture2D" path="res://assets/textures/coast_sand_01/coast_sand_01_nor_gl.jpg" id="2_fg52o"]
+[ext_resource type="Texture2D" path="res://assets/textures/coast_sand_01/coast_sand_01_arm.jpg" id="3_obmi4"]
+
+[resource]
+albedo_color = Color(1, 0.98, 0.94, 1)
+albedo_texture = ExtResource("1_qcop1")
+orm_texture = ExtResource("3_obmi4")
+normal_enabled = true
+normal_texture = ExtResource("2_fg52o")
+texture_filter = 5

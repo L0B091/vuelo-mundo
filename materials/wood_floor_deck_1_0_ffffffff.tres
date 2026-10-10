@@ -1,0 +1,12 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/wood_floor_deck/wood_floor_deck_diff.jpg" id="1_h2d4f"]
+[ext_resource type="Texture2D" path="res://assets/textures/wood_floor_deck/wood_floor_deck_nor_gl.jpg" id="2_7gk2x"]
+[ext_resource type="Texture2D" path="res://assets/textures/wood_floor_deck/wood_floor_deck_arm.jpg" id="3_fr2on"]
+
+[resource]
+albedo_texture = ExtResource("1_h2d4f")
+orm_texture = ExtResource("3_fr2on")
+normal_enabled = true
+normal_texture = ExtResource("2_7gk2x")
+texture_filter = 5

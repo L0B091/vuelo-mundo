@@ -1,0 +1,13 @@
+[gd_resource type="ORMMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/thatch_roof_angled/thatch_roof_angled_diff.jpg" id="1_l2rlh"]
+[ext_resource type="Texture2D" path="res://assets/textures/thatch_roof_angled/thatch_roof_angled_nor_gl.jpg" id="2_a0qd3"]
+[ext_resource type="Texture2D" path="res://assets/textures/thatch_roof_angled/thatch_roof_angled_arm.jpg" id="3_4me2x"]
+
+[resource]
+albedo_color = Color(1, 0.86, 0.66, 1)
+albedo_texture = ExtResource("1_l2rlh")
+orm_texture = ExtResource("3_4me2x")
+normal_enabled = true
+normal_texture = ExtResource("2_a0qd3")
+texture_filter = 5
