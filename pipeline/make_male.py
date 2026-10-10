@@ -543,6 +543,9 @@ def build_zone(z, osm, l8, out_dir):
                 model = -0.2
             we = max(0.0, 1.0 - p.distance(edge) / 250.0)
             depth[r, c] = model * (1 - we) + dl8 * we
+    import make_sdb
+    est = make_sdb.grid_global(z.e0, z.n0, z.w * z.k, z.h * z.k, N, N)
+    depth = make_sdb.blend(depth, est, w=make_sdb.zone_weight(N, z.w, z.h)).astype(np.float32)
     depth.astype(np.float32).tofile(out_dir / "depth.f32")
     # lecho: grilla 48x48 con la misma profundidad (escalada por k como L8: y = -d)
     G = 64

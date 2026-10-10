@@ -365,6 +365,9 @@ def main():
             model = shelf * (1 - t) + max(dl8, shelf) * t
             we = max(0.0, 1.0 - p.distance(edge) / 250.0)
             depth[r, c] = model * (1 - we) + dl8 * we
+    import make_sdb
+    est = make_sdb.grid_global(z.e0, z.n0, z.w * z.k, z.h * z.k, N, N)
+    depth = make_sdb.blend(depth, est, w=make_sdb.zone_weight(N, z.w, z.h)).astype(np.float32)
     depth.tofile(out_dir / "depth.f32")
     G = 64
     for r in range(G - 1):

@@ -105,3 +105,14 @@ Contains modified Copernicus Sentinel data 2026 (escena S2B_43NCE_20260125_0_L2A
 verdadero TCI), procesada por ESA; COG públicos de AWS Open Data (sentinel-cogs) vía el
 catálogo STAC earth-search (Element 84). Uso: tinte relativo de 64x64 muy difuminado sobre el
 lecho de los micro-mapas (`pipeline/make_s2_tint.py`). No se calca ninguna geometría.
+
+## Batimetría derivada de satélite (ESTIMACIÓN)
+Profundidades someras (0.3-20 m) estimadas con la razón de logaritmos azul/verde de Stumpf et
+al. (2003, Limnol. Oceanogr. 48:547-556) sobre bandas B02/B03 (B08 para enmascarar tierra) de
+Copernicus Sentinel-2 L2A, escena S2B_43NCE_20260125_0_L2A (contains modified Copernicus
+Sentinel data 2026; COG públicos de AWS Open Data). Calibración laxa por mínimos cuadrados a
+profundidades típicas por clase geomorfológica del Allen Coral Atlas (planicie 1.5 m, laguna
+somera 6 m, laguna profunda 20 m): d = 47.8·r − 41.2 (`data/sdb_fit.json`). Sin sondeos de
+campo: es una estimación, mezclada al 70 % con el modelo existente solo donde este da < 25 m,
+y atenuada en los 250 m del borde de cada micro-mapa. Aplicada a las teselas L8 cubiertas por
+la escena (431 celdas, promedio a 611 m) y a las zonas de Malé y del resort.

@@ -240,6 +240,14 @@ def bake_detail(stats):
     import lagoons
     lat_rows = [global_to_lonlat(oe, on - r * step)[1] for r in range(rows)]
     h, lag, _ = lagoons.correct(h, land, reef, ds, lat_rows, step)
+    # batimetría derivada de Sentinel-2 (estimación, ver make_sdb.py) donde hay escena
+    import make_sdb
+    est = make_sdb.grid_global(oe - step / 2, on + step / 2, cols * step, rows * step, cols, rows)
+    d = np.where(land == 1, -1.0, -h.astype(np.float32))
+    d2 = make_sdb.blend(d, est)
+    changed = int(np.sum(d2 != d))
+    h = np.where(d2 != d, -d2, h).astype(h.dtype)
+    print("SDB Sentinel-2: celdas ajustadas", changed)
     # Maldivas es plana (máx. natural ~2.4 m; rellenos hasta ~3 m): ETOPO trae picos espurios
     # de decenas de metros sobre islotes (artefactos), que se veían como mesetas de arena.
     h = np.where(land == 1, np.clip(h, 1, 3), h).astype(h.dtype)
