@@ -106,6 +106,9 @@ var device: Dictionary = {}
 func _ready() -> void:
 	detect()
 	_load_settings()
+	if StartupGuard.begin():
+		force_profile("low")
+		return
 	_apply_choice()
 
 

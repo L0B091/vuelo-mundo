@@ -33,6 +33,7 @@ func _ready() -> void:
 		if a.begins_with("--boot-screenshot="):
 			_shot_path = a.substr(18)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	get_tree().create_timer(5.0).timeout.connect(StartupGuard.ok)
 	var bg := ColorRect.new()
 	bg.color = Color(0.04, 0.18, 0.32)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -53,6 +54,12 @@ func _ready() -> void:
 	build.add_theme_font_size_override("font_size", 14)
 	build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(build)
+	if not StartupGuard.errors.is_empty():
+		var err := Label.new()
+		err.text = StartupGuard.text()
+		err.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		err.add_theme_color_override("font_color", Color(1, 0.55, 0.45))
+		box.add_child(err)
 	info = Label.new()
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", 18)

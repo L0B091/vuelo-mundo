@@ -28,7 +28,15 @@ func setup(p_def: CharacterDef) -> void:
 	pivot.name = "Pivot"
 	pivot.position = Vector3(0, 0.95, 0)
 	add_child(pivot)
-	var ps: PackedScene = load(def.base_scene)
+	var ps: PackedScene = load(def.base_scene) as PackedScene
+	if ps == null:
+		# arranque a prueba de fallos: si falta el cuerpo elegido, se usa el maniquí base
+		StartupGuard.report("No se pudo cargar el personaje (%s); se usa el cuerpo base." % def.base_scene)
+		def = def.duplicate() as CharacterDef
+		def.base_scene = CharacterDef.BASE_SCENE
+		def.suit_style = "color"
+		def.accessories = PackedStringArray()
+		ps = load(CharacterDef.BASE_SCENE) as PackedScene
 	model = ps.instantiate()
 	model.rotation_degrees.y = 180.0  # el modelo mira a +Z; el avatar avanza hacia -Z
 	model.position = Vector3(0, -0.95, 0)

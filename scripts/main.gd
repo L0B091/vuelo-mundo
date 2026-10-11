@@ -162,6 +162,15 @@ func _ready() -> void:
 		var at: Node = load("res://scripts/tools/autotest.gd").new()
 		at.set("main", self)
 		add_child(at)
+	# el arranque se da por bueno tras 8 s de juego (ver StartupGuard)
+	get_tree().create_timer(8.0).timeout.connect(StartupGuard.ok)
+	if not StartupGuard.errors.is_empty():
+		var el := Label.new()
+		el.text = StartupGuard.text()
+		el.position = Vector2(20, 200)
+		el.add_theme_color_override("font_color", Color(1, 0.55, 0.45))
+		add_child(el)
+		get_tree().create_timer(12.0).timeout.connect(el.queue_free)
 	print("Vuelo Mundo: inicio en %s, perfil %s (%s)" % [gp, Quality.current_name, Quality.detected_by])
 
 
