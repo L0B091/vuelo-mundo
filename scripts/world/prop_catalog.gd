@@ -190,6 +190,8 @@ const MESHY := {
 	"food_truck": ["food_truck.glb", 4.6],
 	"dhoni": ["dhoni.glb", 12.0]
 }
+const RECOLOR := ["m_man", "m_woman", "m_tourist", "m_fisher", "m_boy", "m_girl", "m_sit", "beach_ball"]
+const PROP_TEX := preload("res://shaders/prop_tex.gdshader")
 const MESHY_TRIS := {"food_truck": 4000, "dhoni": 4000}
 const DA3_TRIS := {"bicycle": 900, "car": 1500, "taxi": 1500, "hatchback": 1500, "crane": 2500, "dhoni": 2500}
 const PH_MODEL := {
@@ -539,3 +541,31 @@ static func with_slab(m: ArrayMesh) -> ArrayMesh:
 	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	out.surface_set_material(out.get_surface_count() - 1, m.surface_get_material(0))
 	return out
+
+
+## Pasa los materiales del modelo Meshy al sombreador de props texturizados (teñido de ropa por
+## instancia para la gente y la pelota; balanceo para el dhoni).
+static func textured(m: ArrayMesh, kind: String) -> ArrayMesh:
+	if kind == "dhoni":  # el casco del modelo queda sobre el agua: se hunde ~30 % de su alto
+		var bb := m.get_aabb()
+		var sunk := ArrayMesh.new()
+		for si in m.get_surface_count():
+			var arr := m.surface_get_arrays(si)
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			for k in v.size():
+				v[k].y -= bb.size.y * 0.3
+			arr[Mesh.ARRAY_VERTEX] = v
+			sunk.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+			sunk.surface_set_material(si, m.surface_get_material(si))
+		m = sunk
+	for si in m.get_surface_count():
+		var bm := m.surface_get_material(si) as BaseMaterial3D
+		if bm == null:
+			continue
+		var sm := ShaderMaterial.new()
+		sm.shader = PROP_TEX
+		sm.set_shader_parameter(&"albedo_tex", bm.albedo_texture)
+		sm.set_shader_parameter(&"recolor", kind in RECOLOR)
+		sm.set_shader_parameter(&"bob", kind == "dhoni")
+		m.surface_set_material(si, sm)
+	return m

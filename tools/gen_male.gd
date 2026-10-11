@@ -320,7 +320,7 @@ func _prop_mesh(kind: String) -> Mesh:
 			(load("res://assets/models/meshy/" + str(PropCatalog.MESHY[kind][0])) as PackedScene).instantiate()
 		)
 		var mm0 := PropCatalog.decimate(_merge_meshes(scm), int(PropCatalog.MESHY_TRIS.get(kind, 2500)))
-		mesh = PropCatalog.fit_size(mm0, float(PropCatalog.MESHY[kind][1]))
+		mesh = PropCatalog.textured(PropCatalog.fit_size(mm0, float(PropCatalog.MESHY[kind][1])), kind)
 		scm.free()
 	elif PropCatalog.DA3.has(kind):
 		var sc3: Node = (load("res://assets/models/3da/" + str(PropCatalog.DA3[kind][0])) as PackedScene).instantiate()
@@ -462,7 +462,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				lst[b] = tmp
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_colors = kind == "scooter" or kind in PropCatalog.PERSON_KINDS
+			mm.use_colors = kind == "scooter" or kind in PropCatalog.PERSON_KINDS or kind in PropCatalog.RECOLOR
 			mm.use_custom_data = kind in PropCatalog.PERSON_KINDS
 			mm.mesh = mesh
 			mm.instance_count = lst.size()
@@ -478,6 +478,15 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 						sh.a = float((hh >> 8) % 3) / 2.0  # largo del pantalón: largo / 3/4 / corto
 						mm.set_instance_custom_data(k, sh)
 						mm.set_instance_color(k, NpcCrowd.PANTS[(hh >> 4) % NpcCrowd.PANTS.size()])
+					elif kind in PropCatalog.RECOLOR:
+						var hc := hash(Vector2(it[0], it[2]))
+						# la mitad conserva la ropa original (color blanco = sin teñir)
+						var tc: Color = (
+							Color(1, 1, 1) if hc % 2 == 0 else NpcCrowd.SHIRTS[(hc >> 3) % NpcCrowd.SHIRTS.size()]
+						)
+						if kind == "beach_ball":
+							tc = SCOOTER_COLORS[(hc >> 3) % SCOOTER_COLORS.size()]
+						mm.set_instance_color(k, tc)
 					else:
 						var ci := hash(Vector2(it[0], it[2])) % SCOOTER_COLORS.size()
 						mm.set_instance_color(k, SCOOTER_COLORS[ci])

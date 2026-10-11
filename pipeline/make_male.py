@@ -12,6 +12,8 @@ procedurales dentro de las manzanas reales: se marcan como "procedural" en meta.
 """
 import hashlib
 import json
+
+import crowd_extra
 import math
 import struct
 import sys
@@ -457,7 +459,10 @@ def build_zone(z, osm, l8, out_dir):
     # relleno procedural de manzanas sin edificios en OSM
     osm_b = unary_union([b["poly"].buffer(1.0) for b in blds]) if blds else Polygon()
     free = deck.difference(roads.buffer(SIDEWALK_W + 0.5)).difference(parks).difference(squares)
-    free = free.difference(pitches).difference(osm_b).buffer(-1.0).buffer(0.5)
+    free = free.difference(pitches).difference(osm_b)
+    if not beaches.is_empty:  # la playa artificial no se rellena con edificios (había uno sobre la arena)
+        free = free.difference(beaches.buffer(3.0))
+    free = free.buffer(-1.0).buffer(0.5)
     n_proc = 0
     for blk in (free.geoms if hasattr(free, "geoms") else [free]):
         if blk.geom_type != "Polygon" or blk.area < 80:
@@ -470,6 +475,10 @@ def build_zone(z, osm, l8, out_dir):
             blds.append({"poly": lot, "h": floors * FLOOR_H + 1.0, "seed": s, "procedural": True,
                          "kind": "building"})
             n_proc += 1
+    if not beaches.is_empty:
+        keep = [b for b in blds if b["poly"].intersection(beaches).area < 0.3 * b["poly"].area]
+        print(z.id, "edificios sobre la playa quitados:", [(b["procedural"], round(b["poly"].area)) for b in blds if b not in keep])
+        blds = keep
 
     def shop_edges_for(height):
         def f(p0, p1):
@@ -608,6 +617,7 @@ def build_zone(z, osm, l8, out_dir):
         "streets": [{"name": nm, "kind": hw, "pts": [list(c) for c in g.coords]}
                     for hw, g, w, nm in road_info if nm and hw in SHOP_ROADS],
     }
+    crowd_extra.boats_people(meta)
     (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False))
     print(z.id, json.dumps(meta["stats"]))
     return meta
@@ -700,7 +710,7 @@ def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
             Q[kind].append([px, DECK_Y, pz, _frac(px, pz, 70) * 6.28, 0.85 + _frac(pz, px, 71) * 0.3])
     # playa artificial: chicos jugando, bañistas, vegetación de playa
     if not beaches.is_empty:
-        for (px, pz) in _pts_in(beaches, int(min(120, beaches.area / 60)), 9):
+        for (px, pz) in _pts_in(beaches.buffer(-7.0), int(min(120, beaches.area / 60)), 9):  # lejos de la orilla
             if _frac(px, pz, 72) < 0.45:
                 Q["person_kid"].append([px, 0.6, pz, _frac(px, pz, 73) * 6.28, 0.62 + _frac(pz, px, 74) * 0.12])
             else:

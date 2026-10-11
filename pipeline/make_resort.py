@@ -9,6 +9,8 @@ Salida en data/sites/mv_lankanfinolhu/ con el mismo formato que make_male.py (VM
 depth.f32) para que tools/gen_male.gd arme la escena con estilo "resort".
 """
 import json
+
+import crowd_extra
 import math
 import sys
 import urllib.parse
@@ -416,6 +418,8 @@ def main():
                   "ladders": len(ladders), "spurs": len(spurs), "meshes": stats},
         "test_walk": walk, "landing": landing,
     }
+    crowd_extra.boats_people(meta)
+    crowd_extra.resort_people(meta)
     (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False))
     print(z.id, json.dumps(meta["stats"]))
 
