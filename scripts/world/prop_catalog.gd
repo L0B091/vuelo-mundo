@@ -77,7 +77,7 @@ const DA3 := {
 	"ac": ["ac_unit.glb", 0.85],
 	"roof_tank": ["roof_tank.glb", 1.7],
 	"antenna": ["dish.glb", 0.9],
-	"balcony_rail": ["balcony.glb", 2.6],
+	"balcony": ["balcony.glb", 2.6],
 	"laundry": ["laundry.glb", 3.0],
 	"aframe": ["aframe.glb", 0.95],
 	"container": ["container.glb", 6.0],
