@@ -17,6 +17,10 @@ var btn_cam: TouchButton
 var btn_up: TouchButton
 var btn_down: TouchButton
 var look_pad: Control
+var nav: NavHud
+var sensitivity: float = 1.0  # joystick: 0.6 / 1.0 / 1.4 (botón "Sens")
+var tilt_steer: bool = false  # inclinar el teléfono para girar (botón "Incl")
+var _tilt_zero: Vector3 = Vector3.ZERO
 var _msg_t: float = 0.0
 var _near_ground_t: float = 0.0
 var _look_touch: int = -1
@@ -38,8 +42,14 @@ func _ready() -> void:
 	look_pad.gui_input.connect(_on_look_input)
 	root.add_child(look_pad)
 
+	nav = NavHud.new()
+	nav.avatar = avatar
+	if main != null and "index" in main:
+		nav.index = main.index
+	root.add_child(nav)
+
 	info = Label.new()
-	info.position = Vector2(12, 8)
+	info.position = Vector2(12, 70)
 	info.add_theme_font_size_override("font_size", 15)
 	info.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	info.add_theme_constant_override("outline_size", 4)
@@ -76,11 +86,11 @@ func _ready() -> void:
 	btn_boost.toggle_mode = true
 	btn_boost.toggled.connect(func(on: bool) -> void: avatar.boost = on)
 	# cámara: primera persona (por defecto) / tercera persona
-	btn_cam = _button(root, "3ª", Vector2(-330, -400))
+	btn_cam = _button(root, "3ª", Vector2(-330, -410))
 	btn_cam.name = "BtnCamara"
 	btn_cam.pressed.connect(avatar.toggle_camera)
 	# confort: limita el alabeo de la cámara en primera persona (contra el mareo)
-	var btn_comfort := _button(root, "Conf", Vector2(-330, -480))
+	var btn_comfort := _button(root, "Conf", Vector2(-450, -410))
 	btn_comfort.toggle_mode = true
 	btn_comfort.set_on(true)
 	btn_comfort.toggled.connect(
@@ -88,9 +98,24 @@ func _ready() -> void:
 			avatar.fp_roll_limit = 12.0 if on else 180.0
 			avatar.fp_trick_scale = 0.5 if on else 1.0
 	)
-	var btn_fps := _button(root, "FPS", Vector2(-330, -560))
+	var btn_fps := _button(root, "FPS", Vector2(-450, -310))
 	btn_fps.toggle_mode = true
 	btn_fps.toggled.connect(func(on: bool) -> void: perf_toggled.emit(on))
+	var btn_sens := _button(root, "Sens 1.0", Vector2(-570, -410))
+	btn_sens.pressed.connect(
+		func() -> void:
+			sensitivity = {0.6: 1.0, 1.0: 1.4, 1.4: 0.6}.get(snappedf(sensitivity, 0.1), 1.0)
+			btn_sens.text = "Sens %.1f" % sensitivity
+			btn_sens.queue_redraw()
+	)
+	var btn_tilt := _button(root, "Incl", Vector2(-570, -310))
+	btn_tilt.toggle_mode = true
+	btn_tilt.toggled.connect(
+		func(on: bool) -> void:
+			tilt_steer = on
+			_tilt_zero = Input.get_accelerometer()
+			show_message("Inclinar para girar: " + ("sí" if on else "no"))
+	)
 	avatar.camera_mode_changed.connect(func(tp: bool) -> void: btn_cam.text = "1ª" if tp else "3ª")
 
 
@@ -158,7 +183,7 @@ func _process(dt: float) -> void:
 	if avatar == null:
 		return
 	var flying := avatar.state != Avatar.State.WALK
-	avatar.touch_stick = stick.value
+	avatar.touch_stick = stick_response(stick.value, sensitivity) + _tilt()
 	avatar.touch_climb = (1.0 if btn_up.held else 0.0) - (1.0 if btn_down.held else 0.0)
 	throttle.visible = flying
 	btn_up.visible = flying
@@ -180,7 +205,27 @@ func _process(dt: float) -> void:
 	else:
 		_near_ground_t = 0.0
 		btn_land.modulate = Color.WHITE
+	# alcance del minimapa según altura: bajo = calles cercanas, alto = el atolón
+	nav.map_range_m = clampf(avatar.agl * 8.0, 1500.0, 60000.0) if flying else 600.0
 	_msg_t -= dt
 	msg.modulate.a = clampf(_msg_t, 0.0, 1.0)
 	if main and main.has_method("telemetry"):
 		info.text = main.telemetry()
+
+
+## Curva del joystick: zona muerta (sin deriva al apoyar el pulgar) + expo (preciso cerca del
+## centro, giro fuerte en el borde), escalada por la sensibilidad.
+static func stick_response(v: Vector2, sens: float) -> Vector2:
+	var l := v.length()
+	if l < 0.12:
+		return Vector2.ZERO
+	var t := (l - 0.12) / 0.88
+	var curved := 0.35 * t + 0.65 * t * t * t
+	return v / l * clampf(curved * sens, 0.0, 1.0)
+
+
+func _tilt() -> Vector2:
+	if not tilt_steer:
+		return Vector2.ZERO
+	var a := Input.get_accelerometer() - _tilt_zero
+	return Vector2(clampf(a.x / 4.0, -1.0, 1.0), clampf(-a.y / 4.0, -1.0, 1.0)) * sensitivity

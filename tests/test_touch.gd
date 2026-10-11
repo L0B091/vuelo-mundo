@@ -92,3 +92,28 @@ func test_swipe_trick_gesture() -> void:
 	e.position = Vector2(w * 0.5 + sw, 40)
 	hud._on_look_input(e)
 	assert_true(hud.avatar.acro.active(), "deslizar rápido a la derecha hace un tonel")
+
+
+func test_nav_bearing_and_distance() -> void:
+	var a := GlobalPos.new(8188839.0, 470000.0, 100.0)
+	var north := GlobalPos.new(a.e, a.n + 3000.0, 0.0)
+	var east := GlobalPos.new(a.e + 3000.0, a.n, 0.0)
+	assert_almost_eq(NavHud.bearing(a, north), 0.0, 0.5)
+	assert_almost_eq(NavHud.bearing(a, east), 90.0, 0.5)
+	assert_almost_eq(NavHud.rel(a, north).length(), 3000.0, 20.0)
+
+
+func test_nav_hud_marks_zones() -> void:
+	var hud := _setup()
+	hud.nav.index = ZoneIndex.load_from("res://data/zone_index.json")
+	var near: Dictionary = hud.nav.nearest()
+	assert_false(near.is_empty(), "hay zonas caminables en el índice")
+	assert_true(near.has("bearing_deg") and near.has("dist_m"))
+
+
+func test_stick_deadzone_and_curve() -> void:
+	assert_eq(Hud.stick_response(Vector2(0.08, 0.05), 1.0), Vector2.ZERO, "zona muerta: sin deriva")
+	var half := Hud.stick_response(Vector2(0.5, 0), 1.0).x
+	assert_between(half, 0.1, 0.35, "cerca del centro es suave")
+	assert_almost_eq(Hud.stick_response(Vector2(1, 0), 1.0).x, 1.0, 0.01)
+	assert_gt(Hud.stick_response(Vector2(0.5, 0), 1.4).x, half, "más sensibilidad = más giro")
