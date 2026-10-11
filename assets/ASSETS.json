@@ -194,6 +194,210 @@
   "license": "CC0 1.0"
  },
  {
+  "id": "fire_hydrant",
+  "kind": "model",
+  "use": "hidrantes en veredas",
+  "name": "Fire Hydrant",
+  "authors": [
+   "Gonçalo Felício"
+  ],
+  "polycount": 86316,
+  "source": "https://polyhaven.com/a/fire_hydrant",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "exterior_aircon_unit",
+  "kind": "model",
+  "use": "aires acondicionados en fachadas",
+  "name": "Exterior Aircon Unit",
+  "authors": [
+   "Monsta3D"
+  ],
+  "polycount": 18986,
+  "source": "https://polyhaven.com/a/exterior_aircon_unit",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "planter_box_01",
+  "kind": "model",
+  "use": "jardineras frente a comercios",
+  "name": "Planter Box 01",
+  "authors": [
+   "James Ray Cock"
+  ],
+  "polycount": 8094,
+  "source": "https://polyhaven.com/a/planter_box_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "plastic_crate_01",
+  "kind": "model",
+  "use": "cajones de plástico (puestos, comercios)",
+  "name": "Plastic Crate 01",
+  "authors": [
+   "PierreB3D"
+  ],
+  "polycount": 18320,
+  "source": "https://polyhaven.com/a/plastic_crate_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "wooden_crate_01",
+  "kind": "model",
+  "use": "cajones de madera (mercado, puerto)",
+  "name": "Wooden Crate 01",
+  "authors": [
+   "James Ray Cock"
+  ],
+  "polycount": 6576,
+  "source": "https://polyhaven.com/a/wooden_crate_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "barrel_03",
+  "kind": "model",
+  "use": "barriles / tanques de agua en azoteas",
+  "name": "Barrel 03",
+  "authors": [
+   "Serhii Khromov"
+  ],
+  "polycount": 1473,
+  "source": "https://polyhaven.com/a/barrel_03",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "utility_box_01",
+  "kind": "model",
+  "use": "cajas eléctricas en veredas",
+  "name": "Utility Box 01",
+  "authors": [
+   "James Ray Cock"
+  ],
+  "polycount": 4404,
+  "source": "https://polyhaven.com/a/utility_box_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "water_manhole_cover",
+  "kind": "model",
+  "use": "tapas de alcantarilla en calles",
+  "name": "Water Manhole Cover",
+  "authors": [
+   "Raunox"
+  ],
+  "polycount": 6301,
+  "source": "https://polyhaven.com/a/water_manhole_cover",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "trashbag",
+  "kind": "model",
+  "use": "bolsas de basura junto a cestos",
+  "name": "Trashbag",
+  "authors": [
+   "Benny Weimer"
+  ],
+  "polycount": 4482,
+  "source": "https://polyhaven.com/a/trashbag",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "propane_tank",
+  "kind": "model",
+  "use": "garrafas frente a comercios",
+  "name": "Propane Tank",
+  "authors": [
+   "Slinc"
+  ],
+  "polycount": 5238,
+  "source": "https://polyhaven.com/a/propane_tank",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "lifebuoy",
+  "kind": "model",
+  "use": "salvavidas en malecón y muelles",
+  "name": "Lifebuoy",
+  "authors": [
+   "Hank Kaamura"
+  ],
+  "polycount": 10728,
+  "source": "https://polyhaven.com/a/lifebuoy",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "bananas",
+  "kind": "model",
+  "use": "bananas en puestos de fruta",
+  "name": "Bananas",
+  "authors": [
+   "Alexander Shulha"
+  ],
+  "polycount": 46868,
+  "source": "https://polyhaven.com/a/bananas",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "old_tyre",
+  "kind": "model",
+  "use": "neumáticos viejos (puerto, defensas de muelle)",
+  "name": "Old Tyre",
+  "authors": [
+   "MP"
+  ],
+  "polycount": 2880,
+  "source": "https://polyhaven.com/a/old_tyre",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "rollershutter_window_01",
+  "kind": "model",
+  "use": "persianas metálicas de comercios",
+  "name": "Rollershutter Window 01",
+  "authors": [
+   "MP"
+  ],
+  "polycount": 1104,
+  "source": "https://polyhaven.com/a/rollershutter_window_01",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "covered_car",
+  "kind": "model",
+  "use": "auto con funda estacionado",
+  "name": "Covered Car",
+  "authors": [
+   "MP"
+  ],
+  "polycount": 12592,
+  "source": "https://polyhaven.com/a/covered_car",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "concrete_road_barrier",
+  "kind": "model",
+  "use": "barreras de hormigón (obras, puerto)",
+  "name": "Concrete Road Barrier",
+  "authors": [
+   "Amal Kumar"
+  ],
+  "polycount": 80776,
+  "source": "https://polyhaven.com/a/concrete_road_barrier",
+  "license": "CC0 1.0"
+ },
+ {
+  "id": "modular_street_seating",
+  "kind": "model",
+  "use": "bancos del malecón",
+  "name": "Modular Street Seating",
+  "authors": [
+   "Stuart Attenborrow"
+  ],
+  "polycount": 25156,
+  "source": "https://polyhaven.com/a/modular_street_seating",
+  "license": "CC0 1.0"
+ },
+ {
   "id": "kenney/kenney_car-kit",
   "source": "https://kenney.nl/assets/car-kit",
   "author": "Kenney (www.kenney.nl)",

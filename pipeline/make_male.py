@@ -40,11 +40,12 @@ ROAD_W = {"primary": 11.0, "primary_link": 7.0, "secondary": 9.0, "tertiary": 7.
 SIDEWALK_W = 1.6
 SHOP_ROADS = {"primary", "secondary", "tertiary"}
 # modelos listos (Kenney, CC0): los nombres los resuelve tools/gen_male.gd (KENNEY)
-VEHICLES = ("car", "taxi", "van", "delivery", "suv", "pickup", "car", "taxi")
-SHOP_FRONT = ("fruit_stand", "bread_stand", "freezer", "crate", "barrel", "shop_shelf")
+VEHICLES = ("car", "taxi", "van", "delivery", "suv", "pickup", "covered_car", "taxi")
+SHOP_FRONT = ("fruit_stand", "bread_stand", "freezer", "crate", "barrel", "shop_shelf", "gas", "planter")
 EXTRA_KINDS = ("taxi", "van", "delivery", "suv", "pickup", "traffic_light", "sign_stop", "sign_street",
                "elec_pole", "cone", "planter", "fruit_stand", "bread_stand", "freezer", "crate", "barrel",
-               "shop_shelf", "cafe_table", "stool", "roof_tank", "antenna", "stall_roof", "fish_crate")
+               "shop_shelf", "cafe_table", "stool", "roof_tank", "antenna", "stall_roof", "fish_crate", "hydrant", "wood_crate", "utility_box", "manhole", "trashbag",
+               "gas", "bananas", "tyre", "covered_car", "barrier")
 
 
 def market_point(z):
@@ -685,10 +686,16 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                     continue
                 f = _frac(px, pz, 12)
                 yaw = math.atan2(nx * sd, nz * sd)
-                kind = ("bin" if f < 0.3 else "sign_street" if f < 0.42 else "elec_pole" if f < 0.55
-                        else "planter" if f < 0.68 and hw in SHOP_ROADS else "cone" if f < 0.71 else None)
+                kind = ("bin" if f < 0.25 else "sign_street" if f < 0.35 else "elec_pole" if f < 0.47
+                        else "planter" if f < 0.58 and hw in SHOP_ROADS else "hydrant" if f < 0.64
+                        else "utility_box" if f < 0.72 else "trashbag" if f < 0.80 else "cone" if f < 0.81 else None)
                 if kind:
                     P[kind].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
+                if kind == "bin":
+                    P["trashbag"].append([px + dx * 0.7, DECK_Y + 0.02, pz + dz * 0.7, yaw + 1.0, 1.0])
+                # tapa de alcantarilla en el medio de la calzada
+                if _frac(x, zz, 17) < 0.35 and w > 4.0:
+                    P["manhole"].append([x, DECK_Y + 0.035, zz, yaw, 1.0])
             # árboles de vereda (pocos: Malé es muy densa)
             for x, zz, dx, dz in _along(g, 31.0, 13.0):
                 if _frac(x, zz, 4) < 0.6:
@@ -779,6 +786,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                     elif f < 0.40:
                         kind = SHOP_FRONT[int(_frac(cz, cx, 14) * len(SHOP_FRONT)) % len(SHOP_FRONT)]
                         P[kind].append([cx + nx * 0.8, DECK_Y + 0.03, cz + nz * 0.8, yaw + math.pi, 1.0])
+                        if kind == "fruit_stand":
+                            P["bananas"].append([cx + nx * 0.8, DECK_Y + 1.05, cz + nz * 0.8, yaw, 1.0])
                     elif f < 0.46:
                         P["cafe_table"].append([cx + nx * 1.6, DECK_Y + 0.03, cz + nz * 1.6, yaw, 1.0])
                         for k in (-0.7, 0.7):
@@ -813,6 +822,10 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                 P["stall_roof"].append([px, DECK_Y + 0.02, pz, 0.0, 1.0])
                 P["fruit_stand" if (r_ + c_) % 3 else "fish_crate"].append([px, DECK_Y + 0.03, pz, 0.0, 1.0])
                 P["crate"].append([px + 1.2, DECK_Y + 0.03, pz + 0.9, _frac(px, pz) * 3.0, 1.0])
+                P["wood_crate"].append([px - 1.1, DECK_Y + 0.03, pz + 1.2, _frac(pz, px) * 3.0, 1.0])
+                P["bananas"].append([px, DECK_Y + 1.05, pz, _frac(px, pz, 3) * 6.0, 1.0])
+        for q in range(10):
+            P["tyre" if q % 2 else "barrier"].append([mk[0] - 6.0 + q * 2.4, DECK_Y + 0.03, mk[1] - 5.0, 0.0, 1.0])
     out = {k: [[round(v, 3) for v in it] for it in lst] for k, lst in P.items()}
     out["cables"] = [[round(v, 2) for v in c] for c in cables]
     print(z.id, "detalle urbano:", {k: len(v) for k, v in out.items()})

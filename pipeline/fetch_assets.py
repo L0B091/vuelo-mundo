@@ -35,6 +35,23 @@ MODELS = {
     "painted_wooden_bench": "bancos en parques y en el malecón",
     "plastic_monobloc_chair_01": "sillas de plástico frente a cafés",
     "potted_plant_04": "macetas frente a comercios",
+    "fire_hydrant": "hidrantes en veredas",
+    "exterior_aircon_unit": "aires acondicionados en fachadas",
+    "planter_box_01": "jardineras frente a comercios",
+    "plastic_crate_01": "cajones de plástico (puestos, comercios)",
+    "wooden_crate_01": "cajones de madera (mercado, puerto)",
+    "barrel_03": "barriles / tanques de agua en azoteas",
+    "utility_box_01": "cajas eléctricas en veredas",
+    "water_manhole_cover": "tapas de alcantarilla en calles",
+    "trashbag": "bolsas de basura junto a cestos",
+    "propane_tank": "garrafas frente a comercios",
+    "lifebuoy": "salvavidas en malecón y muelles",
+    "bananas": "bananas en puestos de fruta",
+    "old_tyre": "neumáticos viejos (puerto, defensas de muelle)",
+    "rollershutter_window_01": "persianas metálicas de comercios",
+    "covered_car": "auto con funda estacionado",
+    "concrete_road_barrier": "barreras de hormigón (obras, puerto)",
+    "modular_street_seating": "bancos del malecón",
 }
 HDRIS = {"qwantani_noon_puresky": "cielo de mediodía (solo cielo, sin suelo)"}
 MAPS = {"Diffuse": "diff", "nor_gl": "nor_gl", "arm": "arm"}
@@ -97,6 +114,13 @@ def main():
             "authors": list(info.get("authors", {}).keys()), "polycount": info.get("polycount"),
             "source": f"https://polyhaven.com/a/{aid}", "license": "CC0 1.0",
         })
+    # conservar entradas de otras fuentes (Kenney, Quaternius...) ya registradas
+    try:
+        old = json.load(open(out / "ASSETS.json"))
+        ids = {m["id"] for m in manifest}
+        manifest += [m for m in (old if isinstance(old, list) else old.get("assets", [])) if m.get("id") not in ids]
+    except (OSError, ValueError):
+        pass
     with open(out / "ASSETS.json", "w") as f:
         json.dump(manifest, f, indent=1, ensure_ascii=False)
     print("listo:", len(manifest), "recursos")

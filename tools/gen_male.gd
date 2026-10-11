@@ -50,13 +50,17 @@ const PROP_RANGE := {
 	"roof_tank": [380.0, false],
 	"antenna": [260.0, false],
 	"stall_roof": [160.0, true],
-	"fish_crate": [50.0, false]
-}
-const PH_MODEL := {
-	"bin": "metal_trash_can",
-	"bench": "painted_wooden_bench",
-	"chair": "plastic_monobloc_chair_01",
-	"plant": "potted_plant_04"
+	"fish_crate": [50.0, false],
+	"hydrant": [70.0, false],
+	"wood_crate": [70.0, false],
+	"utility_box": [90.0, false],
+	"manhole": [60.0, false],
+	"trashbag": [50.0, false],
+	"gas": [50.0, false],
+	"bananas": [45.0, false],
+	"tyre": [60.0, false],
+	"covered_car": [300.0, true],
+	"barrier": [120.0, false]
 }
 const SCOOTER_COLORS := [
 	Color(0.9, 0.9, 0.92),
@@ -358,10 +362,14 @@ func _prop_mesh(kind: String) -> Mesh:
 		)
 		mesh = PropCatalog.fit_size(_merge_meshes(sc), float(PropCatalog.KENNEY[kind][1]))
 		sc.free()
-	elif PH_MODEL.has(kind):
-		var id: String = PH_MODEL[kind]
+	elif PropCatalog.PH_MODEL.has(kind):
+		var id: String = PropCatalog.PH_MODEL[kind]
 		var sc: Node = (load("res://assets/models/%s/%s.gltf" % [id, id]) as PackedScene).instantiate()
-		mesh = _merge_meshes(sc)
+		mesh = PropCatalog.decimate(_merge_meshes(sc), int(PropCatalog.PH_TRIS.get(kind, 1200)))
+		if kind == "ac":
+			mesh = PropCatalog.fit_size(mesh as ArrayMesh, 0.85)
+		if kind == "roof_tank":
+			mesh = PropCatalog.fit_size(mesh as ArrayMesh, 1.6)
 		sc.free()
 	else:
 		match kind:

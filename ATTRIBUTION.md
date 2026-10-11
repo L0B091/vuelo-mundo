@@ -128,3 +128,5 @@ barrels, cafe tables and stools, potted plants, roof antennas, market canvas sta
 - Furniture Kit — https://kenney.nl/assets/furniture-kit
 - Food Kit — https://kenney.nl/assets/food-kit
 Files: assets/models/kenney/ (list per pack in assets/ASSETS.json).
+
+Poly Haven models (CC0 1.0, https://polyhaven.com) added for street detail: fire_hydrant, exterior_aircon_unit, planter_box_01, plastic_crate_01, wooden_crate_01, barrel_03, utility_box_01, water_manhole_cover, trashbag, propane_tank, lifebuoy, bananas, old_tyre, rollershutter_window_01, covered_car, concrete_road_barrier, modular_street_seating (authors and URLs in assets/ASSETS.json). Simplified at build time with Godot LOD generation.
