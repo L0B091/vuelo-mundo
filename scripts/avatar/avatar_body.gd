@@ -425,12 +425,16 @@ func set_attitude(bank_deg: float, roll_deg: float, pitch_deg: float, yaw_deg: f
 	pivot.rotation.z = -deg_to_rad(bank_deg + roll_deg)
 
 
+var _prev_speed: float = 0.0
+var _brake: float = 0.0
+
+
 func drive(state: int, speed: float, climb: float, boosted: bool, dt: float) -> void:
 	if model == null:
 		return
 	_land_t = maxf(0.0, _land_t - dt)
 	_launch_t = maxf(0.0, _launch_t - dt)
-	var target := {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "land": 0.0, "launch": 0.0}
+	var target := {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "brake": 0.0, "land": 0.0, "launch": 0.0}
 	var fist := 0.0
 	var pitch := 0.0
 	if state == Avatar.State.WALK:
@@ -445,14 +449,21 @@ func drive(state: int, speed: float, climb: float, boosted: bool, dt: float) -> 
 			_play("idle")
 	else:
 		_play("fly")
-		var fast := smoothstep(260.0, 600.0, speed) if boosted or speed > 300.0 else 0.0
-		var cruise := smoothstep(8.0, 60.0, speed) * (1.0 - fast)
-		target.hover = 1.0 - maxf(cruise, fast)
-		target.cruise = cruise
-		target.fist = fast
-		fist = fast
-		pitch = 75.0 * cruise + 88.0 * fast
-		pitch -= clampf(climb / maxf(speed, 20.0), -0.6, 0.9) * 35.0 * (cruise + fast)
+		var fast := smoothstep(220.0, 520.0, speed)
+		var cruise := smoothstep(6.0, 45.0, speed) * (1.0 - fast)
+		# frenado brusco (pierde > 25 m/s²): se endereza con pose de freno
+		var decel := (_prev_speed - speed) / maxf(dt, 0.001)
+		_brake = lerpf(_brake, 1.0 if decel > 25.0 and speed > 8.0 else 0.0, clampf(dt * 6.0, 0.0, 1.0))
+		var moving := maxf(cruise, fast) * (1.0 - _brake)
+		target.hover = (1.0 - maxf(cruise, fast)) * (1.0 - _brake)
+		target.cruise = cruise * (1.0 - _brake)
+		target.fist = fast * (1.0 - _brake)
+		target.brake = _brake
+		fist = maxf(cruise, fast)
+		# horizontal en crucero; en picada de cabeza (hasta 180°), en subida se endereza
+		var slope := rad_to_deg(asin(clampf(climb / maxf(speed, 1.0), -1.0, 1.0)))
+		pitch = 86.0 * moving - slope * moving - 20.0 * _brake
+		pitch = clampf(pitch, -25.0, 175.0)
 		if _launch_t > 0.0:
 			for p: String in target:
 				target[p] = 0.0
@@ -465,6 +476,7 @@ func drive(state: int, speed: float, climb: float, boosted: bool, dt: float) -> 
 		var r := a_fast if p in ["land", "launch"] else a
 		pose.weights[p] = lerpf(float(pose.weights[p]), float(target[p]), r)
 	pose.fist_r = lerpf(pose.fist_r, fist, a)
+	_prev_speed = speed
 	_pitch = lerpf(_pitch, pitch, clampf(dt * 3.0, 0.0, 1.0))
 	pivot.rotation.x = -deg_to_rad(_pitch)
 	# en cuclillas la cadera baja: los pies quedan en el suelo

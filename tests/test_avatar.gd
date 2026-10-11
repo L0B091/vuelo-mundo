@@ -29,7 +29,8 @@ func test_presets_differ_and_are_customizable() -> void:
 	assert_ne(m.hair_style, f.hair_style)
 	assert_ne(f.base_scene, m.base_scene, "cuerpos separados masculino/femenino")
 	assert_true(f.accessories.has("cape"))
-	assert_true(m.original_look, "protagonista masculino de traje, sin capa ni traje teñido")
+	assert_eq(m.suit_style, "business", "protagonista masculino de traje de calle")
+	assert_false(m.accessories.has("cape"))
 
 
 func test_base_animations_exist() -> void:

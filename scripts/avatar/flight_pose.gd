@@ -30,49 +30,73 @@ const CHAINS := [
 	"DEF-foot.R"
 ]
 const POSES := {
+	# vuelo estacionario erguido: piernas juntas apenas flexionadas, brazos relajados al costado
 	"hover":
 	{
-		"DEF-upper_arm.L": Vector3(0.45, -0.88, 0.1),
-		"DEF-forearm.L": Vector3(0.3, -0.9, 0.3),
-		"DEF-upper_arm.R": Vector3(-0.45, -0.88, 0.1),
-		"DEF-forearm.R": Vector3(-0.3, -0.9, 0.3),
-		"DEF-thigh.L": Vector3(0.08, -0.95, 0.05),
-		"DEF-shin.L": Vector3(0.05, -1.0, -0.05),
-		"DEF-thigh.R": Vector3(-0.06, -0.85, 0.5),
-		"DEF-shin.R": Vector3(-0.03, -0.95, -0.3),
-		"DEF-foot.L": Vector3(0, -0.6, 0.8),
-		"DEF-foot.R": Vector3(0, -0.7, 0.7),
+		"DEF-upper_arm.L": Vector3(0.2, -1.0, 0.02),
+		"DEF-forearm.L": Vector3(0.12, -1.0, 0.14),
+		"DEF-upper_arm.R": Vector3(-0.2, -1.0, 0.02),
+		"DEF-forearm.R": Vector3(-0.12, -1.0, 0.14),
+		"DEF-thigh.L": Vector3(0.025, -1.0, 0.14),
+		"DEF-shin.L": Vector3(0.0, -1.0, -0.16),
+		"DEF-thigh.R": Vector3(-0.025, -1.0, 0.1),
+		"DEF-shin.R": Vector3(0.0, -1.0, -0.2),
+		"DEF-foot.L": Vector3(0, -0.75, 0.66),
+		"DEF-foot.R": Vector3(0, -0.75, 0.66),
+		"DEF-spine.001": Vector3(0, 1, 0.02),
+		"DEF-spine.003": Vector3(0, 1, -0.03),
+		"DEF-neck": Vector3(0, 1, -0.06),
+		"DEF-head": Vector3(0, 1, -0.1),
 	},
+	# crucero (cuerpo horizontal): puño derecho al frente, brazo izquierdo pegado al cuerpo,
+	# piernas rectas y juntas, cabeza levantada mirando adelante
 	"cruise":
 	{
-		"DEF-upper_arm.L": Vector3(0.22, -0.95, -0.2),
-		"DEF-forearm.L": Vector3(0.12, -0.96, -0.25),
-		"DEF-upper_arm.R": Vector3(-0.22, -0.95, -0.2),
-		"DEF-forearm.R": Vector3(-0.12, -0.96, -0.25),
-		"DEF-thigh.L": Vector3(0.03, -1.0, -0.03),
-		"DEF-shin.L": Vector3(0.0, -1.0, -0.06),
-		"DEF-thigh.R": Vector3(-0.03, -1.0, -0.03),
-		"DEF-shin.R": Vector3(0.0, -1.0, -0.06),
-		"DEF-foot.L": Vector3(0, -1.0, 0.1),
-		"DEF-foot.R": Vector3(0, -1.0, 0.1),
+		"DEF-upper_arm.R": Vector3(-0.09, 1.0, 0.16),
+		"DEF-forearm.R": Vector3(-0.02, 1.0, 0.06),
+		"DEF-hand.R": Vector3(0, 1.0, 0.0),
+		"DEF-upper_arm.L": Vector3(0.1, -1.0, -0.06),
+		"DEF-forearm.L": Vector3(0.06, -1.0, -0.04),
+		"DEF-thigh.L": Vector3(0.012, -1.0, -0.03),
+		"DEF-shin.L": Vector3(0.0, -1.0, -0.04),
+		"DEF-thigh.R": Vector3(-0.012, -1.0, -0.03),
+		"DEF-shin.R": Vector3(0.0, -1.0, -0.04),
+		"DEF-foot.L": Vector3(0, -1.0, -0.12),
+		"DEF-foot.R": Vector3(0, -1.0, -0.12),
 		"DEF-head": Vector3(0, 0.5, -0.87),
 		"DEF-neck": Vector3(0, 0.8, -0.6),
 	},
+	# máxima velocidad: los dos puños al frente
 	"fist":
 	{
-		"DEF-upper_arm.R": Vector3(-0.08, 1.0, 0.12),
-		"DEF-forearm.R": Vector3(-0.02, 1.0, 0.08),
-		"DEF-hand.R": Vector3(0, 1.0, 0.05),
-		"DEF-upper_arm.L": Vector3(0.2, -0.95, -0.22),
-		"DEF-forearm.L": Vector3(0.1, -0.96, -0.25),
-		"DEF-thigh.L": Vector3(0.03, -1.0, -0.04),
-		"DEF-shin.L": Vector3(0.0, -1.0, -0.05),
-		"DEF-thigh.R": Vector3(-0.03, -1.0, -0.04),
-		"DEF-shin.R": Vector3(0.0, -1.0, -0.05),
-		"DEF-foot.L": Vector3(0, -1.0, 0.05),
-		"DEF-foot.R": Vector3(0, -1.0, 0.05),
-		"DEF-head": Vector3(0, 0.5, -0.87),
+		"DEF-upper_arm.R": Vector3(-0.07, 1.0, 0.14),
+		"DEF-forearm.R": Vector3(-0.01, 1.0, 0.05),
+		"DEF-hand.R": Vector3(0, 1.0, 0.0),
+		"DEF-upper_arm.L": Vector3(0.07, 1.0, 0.14),
+		"DEF-forearm.L": Vector3(0.01, 1.0, 0.05),
+		"DEF-hand.L": Vector3(0, 1.0, 0.0),
+		"DEF-thigh.L": Vector3(0.01, -1.0, -0.03),
+		"DEF-shin.L": Vector3(0.0, -1.0, -0.03),
+		"DEF-thigh.R": Vector3(-0.01, -1.0, -0.03),
+		"DEF-shin.R": Vector3(0.0, -1.0, -0.03),
+		"DEF-foot.L": Vector3(0, -1.0, -0.12),
+		"DEF-foot.R": Vector3(0, -1.0, -0.12),
+		"DEF-head": Vector3(0, 0.45, -0.89),
 		"DEF-neck": Vector3(0, 0.8, -0.6),
+	},
+	# frenado: el cuerpo se endereza echado atrás, piernas adelante, brazos abiertos
+	"brake":
+	{
+		"DEF-upper_arm.L": Vector3(0.6, -0.55, 0.45),
+		"DEF-forearm.L": Vector3(0.45, -0.3, 0.75),
+		"DEF-upper_arm.R": Vector3(-0.6, -0.55, 0.45),
+		"DEF-forearm.R": Vector3(-0.45, -0.3, 0.75),
+		"DEF-thigh.L": Vector3(0.06, -0.8, 0.6),
+		"DEF-shin.L": Vector3(0.0, -1.0, 0.15),
+		"DEF-thigh.R": Vector3(-0.06, -0.85, 0.5),
+		"DEF-shin.R": Vector3(0.0, -1.0, 0.05),
+		"DEF-foot.L": Vector3(0, -0.4, 0.9),
+		"DEF-foot.R": Vector3(0, -0.4, 0.9),
 	},
 	"land":
 	{
@@ -151,7 +175,7 @@ const HUMANOID_ALIAS := {
 }
 
 ## Peso de cada pose (0..1); el avatar los anima con suavizado.
-var weights: Dictionary = {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "land": 0.0, "launch": 0.0}
+var weights: Dictionary = {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "brake": 0.0, "land": 0.0, "launch": 0.0}
 var fist_r: float = 0.0
 var female: bool = false
 ## Enderezado de columna/cabeza (0..1) para cuerpos retargeteados cuya columna llega encorvada
