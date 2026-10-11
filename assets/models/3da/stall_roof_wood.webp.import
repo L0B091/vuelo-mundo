@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://4iqsdew7gxvy"
+uid="uid://bd55annc2vrqy"
 path="res://.godot/imported/stall_roof_wood.webp-e3b34b77a4cb4a5bbb71b4e392cc2997.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "d624431e74db80c4c0555beef4bd1cac"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

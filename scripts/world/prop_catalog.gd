@@ -4,6 +4,14 @@ extends RefCounted
 
 ## Modelos realistas de 3dassets.dev (CC0): tipo -> [archivo bajo assets/models/3da, tamaño mayor en m]
 ## Props de fachada: se apoyan al ras de la pared (ver flush_back).
+## gente estática (multitud lejana / sentada / en filas): pose del UAL horneada a malla fija
+const PERSON_POSES := {
+	"person_stand": "Idle_Loop",
+	"person_sit": "Sitting_Idle_Loop",
+	"person_talk": "Idle_Talking_Loop",
+	"person_kid": "Dance_Loop"
+}
+const PERSON_BASE := "res://assets/characters/ual/AnimationLibrary_Godot_Standard.gltf"
 const WALL_MOUNT := ["balcony", "ac", "shutter", "laundry_wall"]
 const PROP_SHADER := preload("res://shaders/prop_lib.gdshader")
 const PROP_RANGE := {
@@ -64,6 +72,20 @@ const PROP_RANGE := {
 	"aframe": [60.0, false],
 	"container": [600.0, true],
 	"crane": [1500.0, true],
+	"palm_lean": [700.0, true],
+	"palm_young": [400.0, true],
+	"sea_grape": [200.0, true],
+	"trawler": [900.0, true],
+	"seagull": [80.0, false],
+	"ice_kiosk": [200.0, true],
+	"ice_cart": [120.0, false],
+	"ticket_kiosk": [200.0, true],
+	"food_counter": [150.0, false],
+	"queue_post": [60.0, false],
+	"person_stand": [140.0, false],
+	"person_sit": [110.0, false],
+	"person_talk": [140.0, false],
+	"person_kid": [120.0, false],
 	"shutter": [90.0, false],
 	"bollard": [60.0, false],
 	"buoy": [300.0, false],
@@ -72,6 +94,16 @@ const PROP_RANGE := {
 	"pandanus": [200.0, true]
 }
 const DA3 := {
+	"palm_lean": ["palm_lean.glb", 9.0],
+	"palm_young": ["palm_young.glb", 4.5],
+	"sea_grape": ["sea_grape.glb", 3.0],
+	"trawler": ["trawler.glb", 14.0],
+	"seagull": ["seagull.glb", 1.4],
+	"ice_kiosk": ["ice_kiosk.glb", 3.2],
+	"ice_cart": ["ice_cart.glb", 1.8],
+	"ticket_kiosk": ["ticket_kiosk.glb", 3.0],
+	"food_counter": ["food_counter.glb", 2.6],
+	"queue_post": ["queue_post.glb", 1.0],
 	"palm_tall": ["palm_tall.glb", 9.0],
 	"lamp": ["lamp.glb", 6.5],
 	"fruit_stand": ["fruit_stand.glb", 2.2],
@@ -335,3 +367,83 @@ static func flush_back(m: ArrayMesh) -> ArrayMesh:
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 		out.surface_set_material(si, m.surface_get_material(si))
 	return out
+
+
+## Hornea una pose del maniquí UAL (CC0, Quaternius) a una malla estática con color de vértice
+## (camisa blanca para teñir por instancia, pantalón oscuro). Necesita un nodo en el árbol.
+static func person(kind: String, host: Node) -> ArrayMesh:
+	var body: Node3D = (load(PERSON_BASE) as PackedScene).instantiate()
+	host.add_child(body)
+	var ap: AnimationPlayer = body.find_children("*", "AnimationPlayer", true, false)[0]
+	# pose aplicada a mano (el mixer no procesa dentro de un script de herramienta)
+	var anim := ap.get_animation(str(PERSON_POSES[kind]).trim_suffix("_Loop"))
+	var root := ap.get_node(ap.root_node)
+	for tr in anim.get_track_count():
+		var np := anim.track_get_path(tr)
+		var sk := root.get_node_or_null(NodePath(np.get_concatenated_names())) as Skeleton3D
+		if sk == null:
+			continue
+		var bone := sk.find_bone(np.get_concatenated_subnames())
+		if bone < 0:
+			continue
+		match anim.track_get_type(tr):
+			Animation.TYPE_ROTATION_3D:
+				sk.set_bone_pose_rotation(bone, anim.rotation_track_interpolate(tr, 0.4))
+			Animation.TYPE_POSITION_3D:
+				sk.set_bone_pose_position(bone, anim.position_track_interpolate(tr, 0.4))
+	for sk: Skeleton3D in body.find_children("*", "Skeleton3D", true, false):
+		sk.force_update_all_bone_transforms()
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for mi: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
+		var sk := mi.get_node_or_null(mi.skeleton) as Skeleton3D
+		var skin := mi.skin
+		var xs := body.global_transform.affine_inverse() * (sk.global_transform if sk else mi.global_transform)
+		var binds: Array[Transform3D] = []
+		if sk != null and skin != null:
+			for bi in skin.get_bind_count():
+				var bone := skin.get_bind_bone(bi)
+				if bone < 0:
+					bone = sk.find_bone(skin.get_bind_name(bi))
+				binds.append(sk.get_bone_global_pose(bone) * skin.get_bind_pose(bi))
+		for si in mi.mesh.get_surface_count():
+			var arr := mi.mesh.surface_get_arrays(si)
+			var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var bo = arr[Mesh.ARRAY_BONES]
+			var we = arr[Mesh.ARRAY_WEIGHTS]
+			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+			var col := Color(1, 1, 1) if si == 0 else Color(0.24, 0.24, 0.28)
+			var pv := PackedVector3Array()
+			var pn := PackedVector3Array()
+			pv.resize(v.size())
+			pn.resize(v.size())
+			var nb := 4 if bo == null or bo.size() <= v.size() * 4 else 8
+			for k in v.size():
+				var p := Vector3.ZERO
+				var q := Vector3.ZERO
+				if binds.is_empty() or bo == null:
+					p = v[k]
+					q = nn[k]
+				else:
+					for j in nb:
+						var w: float = we[k * nb + j]
+						if w > 0.0:
+							var t: Transform3D = binds[int(bo[k * nb + j])]
+							p += (t * v[k]) * w
+							q += (t.basis * nn[k]) * w
+				pv[k] = xs * p
+				pn[k] = (xs.basis * q).normalized()
+			for k in idx:
+				st.set_color(col)
+				st.set_normal(pn[k])
+				st.add_vertex(pv[k])
+	body.queue_free()
+	st.index()
+	var mat := ShaderMaterial.new()
+	mat.shader = PROP_SHADER
+	mat.set_shader_parameter(&"roughness", 0.8)
+	mat.set_shader_parameter(&"grime", 0.15)
+	st.set_material(mat)
+	var m := decimate(st.commit(), 1200)
+	return m

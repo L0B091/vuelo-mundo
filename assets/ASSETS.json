@@ -1201,5 +1201,65 @@
   ],
   "license": "CC0 1.0 Universal",
   "attributionText": null
+ },
+ {
+  "id": "3da/ice_kiosk",
+  "kind": "model",
+  "name": "Ice cream kiosk (Amusement Arcade and Seaside Pier)",
+  "source": "https://3dassets.dev/assets/amusement-arcade-and-seaside-pier-ice-cream-kiosk-a02711ff",
+  "file": "https://cdn.3dassets.dev/assets/35397/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/ice_cart",
+  "kind": "model",
+  "name": "ice cream cart (Zoo and Safari Park Builder)",
+  "source": "https://3dassets.dev/assets/zoo-and-safari-park-builder-ice-cream-cart-8c33baa2",
+  "file": "https://cdn.3dassets.dev/assets/21505/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/ticket_kiosk",
+  "kind": "model",
+  "name": "Terminal kiosk and cafe counter (Ferry Terminal and Harbour Crossing)",
+  "source": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-3e7835e9",
+  "file": "https://cdn.3dassets.dev/assets/35656/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/food_counter",
+  "kind": "model",
+  "name": "Food court counter unit (Motorway Services and Truck Park)",
+  "source": "https://3dassets.dev/assets/motorway-services-and-truck-park-food-court-counter-af0fa092",
+  "file": "https://cdn.3dassets.dev/assets/35932/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/queue_post",
+  "kind": "model",
+  "name": "Queue Barrier (Bank Vault Heist Kit)",
+  "source": "https://3dassets.dev/assets/bank-vault-heist-kit-queue-barrier-4014952b",
+  "file": "https://cdn.3dassets.dev/assets/25087/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
  }
 ]

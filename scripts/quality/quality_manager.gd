@@ -24,8 +24,8 @@ const PROFILES: Dictionary = {
 		"coarse_radius": 1,
 		"detail_radius_m": 80000.0,
 		"max_finalize_per_frame": 2,
-		"npc_pedestrians": 6,
-		"npc_riders": 2,
+		"npc_pedestrians": 10,
+		"npc_riders": 4,
 		"max_inflight": 2,
 		"finalize_budget_usec": 3000,
 		"collision_budget_usec": 2500
@@ -42,8 +42,8 @@ const PROFILES: Dictionary = {
 		"coarse_radius": 1,
 		"detail_radius_m": 140000.0,
 		"max_finalize_per_frame": 3,
-		"npc_pedestrians": 12,
-		"npc_riders": 5,
+		"npc_pedestrians": 20,
+		"npc_riders": 8,
 		"max_inflight": 3,
 		"finalize_budget_usec": 3000,
 		"collision_budget_usec": 2500
@@ -60,8 +60,8 @@ const PROFILES: Dictionary = {
 		"coarse_radius": 2,
 		"detail_radius_m": 220000.0,
 		"max_finalize_per_frame": 4,
-		"npc_pedestrians": 24,
-		"npc_riders": 10,
+		"npc_pedestrians": 40,
+		"npc_riders": 16,
 		"max_inflight": 4,
 		"finalize_budget_usec": 3000,
 		"collision_budget_usec": 2500
@@ -78,8 +78,8 @@ const PROFILES: Dictionary = {
 		"coarse_radius": 2,
 		"detail_radius_m": 320000.0,
 		"max_finalize_per_frame": 6,
-		"npc_pedestrians": 36,
-		"npc_riders": 14,
+		"npc_pedestrians": 60,
+		"npc_riders": 24,
 		"max_inflight": 4,
 		"finalize_budget_usec": 3000,
 		"collision_budget_usec": 2500

@@ -152,3 +152,7 @@ in assets/ASSETS.json.
 Shop sign font: Noto Sans Thaana Bold, SIL Open Font License 1.1 (assets/fonts/OFL.txt),
 https://github.com/notofonts/thaana. Sign texts are generic trade names; the Dhivehi text has not
 been reviewed by a native speaker.
+
+### 3dassets.dev (CC0 1.0), additional props
+- Ice cream kiosk, ice cream cart, ferry terminal kiosk, food court counter, queue barrier: https://3dassets.dev (CC0 1.0). Sources listed in assets/ASSETS.json.
+- Static crowd poses are baked from Quaternius Universal Animation Library mannequin (CC0).

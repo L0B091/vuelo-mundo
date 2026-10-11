@@ -18,6 +18,8 @@ const SHIRTS := [
 	Color(0.4, 0.25, 0.15)
 ]
 
+const PANTS := [Color(0.18, 0.2, 0.3), Color(0.15, 0.15, 0.16), Color(0.55, 0.48, 0.36), Color(0.3, 0.3, 0.32)]
+
 var avatar: Avatar
 var zones: ZoneStreamer
 var max_peds: int = 12
@@ -140,14 +142,16 @@ func _make(kind: String) -> Node3D:
 	var root := Node3D.new()
 	root.name = "NPC_" + kind
 	var body: Node3D = _base.instantiate()
-	body.scale = Vector3.ONE * _rnd.randf_range(0.92, 1.04)
+	var hgt := _rnd.randf_range(0.88, 1.06)
+	var wid := hgt * _rnd.randf_range(0.9, 1.15)  # proporciones variadas (alto / corpulento)
+	body.scale = Vector3(wid, hgt, wid)
 	root.add_child(body)
 	var shirt: Color = SHIRTS[_rnd.randi_range(0, SHIRTS.size() - 1)]
 	for mi: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for s in mi.mesh.get_surface_count():
 			var m := StandardMaterial3D.new()
-			m.albedo_color = shirt if s == 0 else Color(0.2, 0.2, 0.25)
+			m.albedo_color = shirt if s == 0 else PANTS[_rnd.randi_range(0, PANTS.size() - 1)]
 			m.roughness = 0.8
 			mi.set_surface_override_material(s, m)
 		mi.visibility_range_end = 140.0

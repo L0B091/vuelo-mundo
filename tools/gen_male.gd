@@ -313,7 +313,9 @@ func _prop_mesh(kind: String) -> Mesh:
 	if _mats.has(key):
 		return _mats[key]
 	var mesh: Mesh
-	if PropCatalog.DA3.has(kind):
+	if PropCatalog.PERSON_POSES.has(kind):
+		mesh = PropCatalog.person(kind, get_root())
+	elif PropCatalog.DA3.has(kind):
 		var sc3: Node = (load("res://assets/models/3da/" + str(PropCatalog.DA3[kind][0])) as PackedScene).instantiate()
 		var m3 := PropCatalog.decimate(_merge_meshes(sc3), int(PropCatalog.DA3_TRIS.get(kind, 1000)))
 		mesh = PropCatalog.flatten(PropCatalog.fit_size(m3, float(PropCatalog.DA3[kind][1])))
@@ -323,7 +325,7 @@ func _prop_mesh(kind: String) -> Mesh:
 			if bm != null:
 				bm.set_shader_parameter(&"bob", true)
 		if kind == "balcony":
-			mesh = PropCatalog.cut_below(mesh as ArrayMesh, 0.4)
+			mesh = PropCatalog.cut_below(mesh as ArrayMesh, 0.58)
 		if kind in PropCatalog.WALL_MOUNT:
 			mesh = PropCatalog.flush_back(mesh as ArrayMesh)
 	elif PropCatalog.KENNEY.has(kind):
@@ -453,7 +455,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				lst[b] = tmp
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_colors = kind == "scooter"
+			mm.use_colors = kind == "scooter" or PropCatalog.PERSON_POSES.has(kind)
 			mm.mesh = mesh
 			mm.instance_count = lst.size()
 			var org := Vector3(key.x * PROP_CELL, 0, key.y * PROP_CELL)
@@ -462,8 +464,9 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				var b := Basis(Vector3.UP, float(it[3])).scaled(Vector3.ONE * float(it[4]))
 				mm.set_instance_transform(k, Transform3D(b, Vector3(it[0], it[1], it[2]) - org))
 				if mm.use_colors:
-					var ci := hash(Vector2(it[0], it[2])) % SCOOTER_COLORS.size()
-					mm.set_instance_color(k, SCOOTER_COLORS[ci])
+					var pal_c: Array = NpcCrowd.SHIRTS if PropCatalog.PERSON_POSES.has(kind) else SCOOTER_COLORS
+					var ci := hash(Vector2(it[0], it[2])) % pal_c.size()
+					mm.set_instance_color(k, pal_c[ci])
 			var mmi := MultiMeshInstance3D.new()
 			mmi.name = "%s_%d_%d" % [kind, key.x, key.y]
 			mmi.multimesh = mm

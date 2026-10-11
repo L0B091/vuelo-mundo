@@ -399,9 +399,11 @@ def build_zone(z, osm, l8, out_dir):
         meshes["beach"].add_poly(dense, 0.0, 1 / 3, y_fn=beach_y)
 
     # muelles y escolleras
+    pier_polys = []
     for it, g in lpolys("piers"):
         poly = g if g.geom_type in ("Polygon", "MultiPolygon") else g.buffer(2.5, cap_style=2)
         poly = poly.intersection(rect).difference(land)
+        pier_polys.append(poly)
         meshes["pier"].add_poly(poly, DECK_Y - 0.3, 1 / 3)
         walls_of(poly, -1.0, DECK_Y - 0.3, meshes["pier"], (0.8, 0.8, 0.78, 1))
     for it, g in lpolys("breakwaters"):
@@ -599,7 +601,8 @@ def build_zone(z, osm, l8, out_dir):
                   "buildings_procedural": n_proc, "crossings": n_cross, "ad_slots": len(ad_slots),
                   "meshes": stats},
         "palms": palm_points(parks, squares, sidewalks, road_info, z),
-        "props": street_props(z, road_info, blds, parks, squares, land, rect, shop_lines),
+        "props": life_props(street_props(z, road_info, blds, parks, squares, land, rect, shop_lines),
+                            z, parks, squares, beaches, pier_polys, land, rect, road_info),
         "paths": npc_paths(road_info, land, rect, blds),
         "boats": boat_points(land_all, rect),
         "streets": [{"name": nm, "kind": hw, "pts": [list(c) for c in g.coords]}
@@ -625,6 +628,125 @@ def _along(g, step, off=0.0):
         n = math.hypot(dx, dz) or 1.0
         yield p.x, p.y, dx / n, dz / n
         t += step
+
+
+def _pts_in(poly, n, seed):
+    """n puntos deterministas dentro de un polígono (rechazo sobre su caja)."""
+    out, k = [], 0
+    if poly is None or poly.is_empty:
+        return out
+    x0, y0, x1, y1 = poly.bounds
+    while len(out) < n and k < n * 30:
+        k += 1
+        px = x0 + _frac(k, seed, 51) * (x1 - x0)
+        py = y0 + _frac(seed, k, 52) * (y1 - y0)
+        if poly.contains(Point(px, py)):
+            out.append((px, py))
+    return out
+
+
+def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
+    """Vida en la calle: gente estática (multitud lejana barata, MultiMesh), puestos de comida con
+    filas, gente en cafés y puestos, plazas, playa artificial, muelles; vegetación variada;
+    puerto (bolardos, gaviotas, boyas, pesquero). Las cantidades se ralean por perfil en el juego."""
+    Q = {k: [] for k in ("person_stand", "person_sit", "person_talk", "person_kid", "ice_kiosk", "ice_cart",
+                         "ticket_kiosk", "food_counter", "queue_post", "palm_lean", "palm_young", "sea_grape",
+                         "pandanus", "bollard", "seagull", "buoy", "trawler")}
+    Y = DECK_Y + 0.02
+
+    def crowd(px, pz, yaw, kind=None, sc=None):
+        f = _frac(px, pz, 61)
+        kind = kind or ("person_talk" if f < 0.35 else "person_stand")
+        Q[kind].append([px, Y, pz, yaw, sc or (0.9 + _frac(pz, px, 62) * 0.2)])
+
+    # cafés: dos sentados por mesa (en los taburetes)
+    for it in out.get("stool", []):
+        if _frac(it[0], it[2], 63) < 0.75:
+            Q["person_sit"].append([it[0], Y, it[2], it[3] + math.pi, 1.0])
+    # puestos de fruta/pan/heladeras: vendedor detrás, 1-3 clientes delante
+    for kind in ("fruit_stand", "bread_stand", "freezer", "shop_shelf"):
+        for it in out.get(kind, []):
+            x, _, zz, yaw = it[0], it[1], it[2], it[3]
+            fx, fz = math.sin(yaw), math.cos(yaw)
+            crowd(x - fx * 0.9, zz - fz * 0.9, yaw)
+            for q in range(int(1 + _frac(x, zz, 64) * 3)):
+                crowd(x + fx * (1.1 + q * 0.8), zz + fz * (1.1 + q * 0.8), yaw + math.pi)
+    # plazas y parques: kioscos de helado / comida con filas, y gente (Plaza de la República, mezquita)
+    areas = [g for g in (getattr(squares, "geoms", [squares]) if not squares.is_empty else [])] + \
+            [g for g in (getattr(parks, "geoms", [parks]) if not parks.is_empty else [])]
+    for a in areas:
+        if a.geom_type != "Polygon" or not rect.contains(a.centroid):
+            continue
+        n_people = int(min(140, a.area / 35))
+        for (px, pz) in _pts_in(a, n_people, int(a.area)):
+            crowd(px, pz, _frac(px, pz, 65) * 6.28)
+        for (px, pz) in _pts_in(a.buffer(-3), max(1, int(a.area / 2500)), int(a.area) + 7):
+            kind = ("ice_kiosk", "food_counter", "ice_cart", "ticket_kiosk")[int(_frac(px, pz, 66) * 4) % 4]
+            yaw = _frac(pz, px, 67) * 6.28
+            Q[kind].append([px, Y, pz, yaw, 1.0])
+            fx, fz = math.sin(yaw), math.cos(yaw)
+            n_q = int(3 + _frac(px, pz, 68) * 5)
+            for q in range(n_q):  # fila frente al mostrador
+                crowd(px + fx * (2.0 + q * 0.75), pz + fz * (2.0 + q * 0.75), yaw + math.pi, "person_stand")
+            Q["queue_post"].append([px + fx * 2.0 + fz * 0.7, Y, pz + fz * 2.0 - fx * 0.7, yaw, 1.0])
+            Q["queue_post"].append([px + fx * (2.0 + n_q * 0.75) + fz * 0.7, Y, pz + fz * (2.0 + n_q * 0.75) - fx * 0.7, yaw, 1.0])
+        for (px, pz) in _pts_in(a, int(a.area / 300), int(a.area) + 11):
+            kind = ("palm_lean", "palm_young", "sea_grape", "pandanus")[int(_frac(px, pz, 69) * 4) % 4]
+            Q[kind].append([px, DECK_Y, pz, _frac(px, pz, 70) * 6.28, 0.85 + _frac(pz, px, 71) * 0.3])
+    # playa artificial: chicos jugando, bañistas, vegetación de playa
+    if not beaches.is_empty:
+        for (px, pz) in _pts_in(beaches, int(min(120, beaches.area / 60)), 9):
+            if _frac(px, pz, 72) < 0.45:
+                Q["person_kid"].append([px, 0.6, pz, _frac(px, pz, 73) * 6.28, 0.62 + _frac(pz, px, 74) * 0.12])
+            else:
+                crowd(px, pz, _frac(px, pz, 75) * 6.28)
+                Q["person_stand" if _frac(px, pz, 76) < 0.5 else "person_talk"][-1][1] = 0.6
+        for (px, pz) in _pts_in(beaches.buffer(4).difference(beaches).intersection(land), 30, 13):
+            Q["palm_lean"].append([px, DECK_Y, pz, _frac(px, pz, 77) * 6.28, 1.0])
+    # muelles: pasajeros esperando el ferry, bolardos y gaviotas en el borde, boyas cerca
+    for pp in piers:
+        if pp.is_empty:
+            continue
+        for (px, pz) in _pts_in(pp, int(min(60, pp.area / 25)), int(pp.area) + 3):
+            crowd(px, pz, _frac(px, pz, 78) * 6.28)
+        ring = pp.exterior if pp.geom_type == "Polygon" else pp.convex_hull.exterior
+        n_b = int(ring.length / 6)
+        for q in range(n_b):
+            pt = ring.interpolate(q * 6.0)
+            Q["bollard"].append([pt.x, DECK_Y - 0.3, pt.y, 0.0, 0.8])
+            if _frac(pt.x, pt.y, 79) < 0.15:
+                Q["seagull"].append([pt.x, DECK_Y - 0.3, pt.y, _frac(pt.y, pt.x) * 6.28, 1.0])
+        for q in range(int(ring.length / 60)):
+            pt = ring.interpolate(q * 60.0 + 25.0)
+            c = pp.centroid
+            dx, dz = pt.x - c.x, pt.y - c.y
+            dl = math.hypot(dx, dz) or 1.0
+            Q["buoy"].append([pt.x + dx / dl * 14, -0.2, pt.y + dz / dl * 14, 0.0, 0.8])
+    # puerto de pesca: un pesquero amarrado y pescadores descargando junto al mercado
+    mk = market_point(z)
+    if mk is not None and rect.contains(Point(*mk)):
+        Q["trawler"].append([mk[0] + 8.0, -0.1, mk[1] - 30.0, math.pi / 2, 1.0])
+        for q in range(8):
+            crowd(mk[0] + 2.0 + q * 1.4, mk[1] - 22.0 + (q % 3) * 0.8, math.pi, "person_stand")
+    # veredas: parejas y grupos charlando (multitud estática), además de los peatones animados
+    for hw, g, w, nm in road_info:
+        if g.geom_type != "LineString" or hw in ("footway", "path"):
+            continue
+        for x, zz, dx, dz in _along(g, 17.0, 5.0):
+            if _frac(x, zz, 80) < 0.45:
+                continue
+            sd = 1 if _frac(x, zz, 81) > 0.5 else -1
+            nx, nz = dz, -dx
+            px, pz = x + nx * (w / 2 + 0.9) * sd, zz + nz * (w / 2 + 0.9) * sd
+            if not (rect.contains(Point(px, pz)) and land.contains(Point(px, pz))):
+                continue
+            yaw = math.atan2(dx, dz)
+            crowd(px, pz, yaw, "person_talk")
+            crowd(px + dx * 0.8, pz + dz * 0.8, yaw + math.pi)
+    for k, lst in Q.items():
+        out[k] = out.get(k, []) + [[round(v, 3) for v in it] for it in lst]
+    print(z.id, "vida:", {k: len(v) for k, v in Q.items()})
+    return out
 
 
 def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
