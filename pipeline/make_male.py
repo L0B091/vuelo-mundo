@@ -629,6 +629,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
     P = {k: [] for k in ("lamp", "scooter", "car", "bench", "bin", "chair", "plant", "ac", "balcony", "tree")
          + EXTRA_KINDS}
     signs = []
+    from shapely.ops import unary_union as _uu
+    road_near = _uu([g for _, g, _, _ in road_info]) if road_info else None
     cables = []
     bld_union = prep(unary_union([b["poly"] for b in blds]) if blds else Polygon())
     bld_buf = prep(unary_union([b["poly"].buffer(1.5) for b in blds]) if blds else Polygon())
@@ -774,6 +776,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
             front = Point(mx + nx * 3.0, mz + nz * 3.0)
             if bld_union.contains(front) or not rect.contains(Point(mx, mz)):
                 continue  # pared medianera o contra otro edificio: sin detalle
+            if road_near is not None and front.distance(road_near) > 9.0:
+                continue  # patio interior: sin balcones ni aires (se veían sueltos en los patios)
             yaw = math.atan2(nx, nz)
             street = shop_lines is not None and not shop_lines.is_empty and Point(mx, mz).distance(shop_lines) < 12.0
             n_cell = int(L // 3.0)
@@ -791,8 +795,6 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                     # letrero de comercio (atlas de 16, Dhivehi/inglés) sobre la vidriera
                     signs.append([round(cx + nx * 0.12, 3), round(DECK_Y + FLOOR_H - 0.55, 3), round(cz + nz * 0.12, 3),
                                   round(yaw, 4), int(_frac(cz, cx, 32) * 16) % 16])
-                if street and c % 3 == 2 and _frac(cx, cz, 33) < 0.5:
-                    P["shutter"].append([cx + nx * 0.06, DECK_Y + 0.02, cz + nz * 0.06, yaw, 1.0])
                 if street and c % 3 == 1:
                     f = _frac(cx, cz, 9)
                     if f < 0.25:
