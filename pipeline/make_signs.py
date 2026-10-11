@@ -1,8 +1,8 @@
 """Atlas de letreros de comercios de Malé (Dhivehi + inglés), 2 columnas x 8 filas de 512x128.
 
 Fuentes: Noto Sans Thaana Bold (SIL OFL 1.1) para Thaana y DejaVu Sans Bold para el latín.
-Los nombres son genéricos (rubros), sin marcas reales. El texto Dhivehi no fue revisado por
-un hablante nativo.
+Los nombres son genéricos (rubros), sin marcas reales. Solo inglés: sin revisión de un hablante
+nativo no se usa texto Dhivehi (decisión del usuario); se podrá agregar con fuentes atestiguadas.
 """
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
@@ -12,10 +12,10 @@ REPO = Path(__file__).resolve().parents[1]
 THAANA = REPO / "assets/fonts/NotoSansThaana.ttf"
 LATIN = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 SIGNS = [
-    ("ފިހާރަ", "STORE"), ("ހޮޓާ", "CAFE & HOTAA"), ("ބޭސް ފިހާރަ", "PHARMACY"),
-    ("ފޮތް ފިހާރަ", "BOOKSHOP"), ("މަސް", "FRESH FISH"), ("ބޭކަރީ", "BAKERY"),
+    ("", "STORE"), ("", "CAFE"), ("", "PHARMACY"),
+    ("", "BOOKSHOP"), ("", "FRESH FISH"), ("", "BAKERY"),
     ("", "MOBILE & ELECTRONICS"), ("", "TAILOR"), ("", "HARDWARE"), ("", "GROCERY"),
-    ("", "SALON"), ("ހޮޓާ", "TEA SHOP"), ("", "TRAVEL & FERRY"), ("ފިހާރަ", "MINI MART"),
+    ("", "SALON"), ("", "TEA SHOP"), ("", "TRAVEL & FERRY"), ("", "MINI MART"),
     ("", "DIVE SHOP"), ("", "SOUVENIRS"),
 ]
 PALETTE = [((200, 30, 40), (255, 255, 255)), ((20, 90, 160), (255, 255, 255)), ((250, 210, 40), (30, 30, 30)),

@@ -324,6 +324,8 @@ func _prop_mesh(kind: String) -> Mesh:
 				bm.set_shader_parameter(&"bob", true)
 		if kind == "balcony":
 			mesh = PropCatalog.cut_below(mesh as ArrayMesh, 0.4)
+		if kind in PropCatalog.WALL_MOUNT:
+			mesh = PropCatalog.flush_back(mesh as ArrayMesh)
 	elif PropCatalog.KENNEY.has(kind):
 		var sc: Node = (
 			(load("res://assets/models/kenney/" + str(PropCatalog.KENNEY[kind][0])) as PackedScene).instantiate()
@@ -815,8 +817,8 @@ func _resort_layers(root: Node3D, cols: Node3D, dir: String, meta: Dictionary) -
 	t += _layer(root, cols, dir, "sidewalk", _pbr("coast_sand_01", 1.0, Color(0.92, 0.88, 0.8)), 0, false)
 	t += _layer(root, cols, dir, "pier", _pbr("wood_floor_deck", 1.0), L_WALK, false)
 	t += _layer(root, cols, dir, "stilts", _pbr("wood_floor_deck", 1.0, Color(0.7, 0.6, 0.5)), 0, true, 350.0, true)
-	t += _layer(root, cols, dir, "walls", _pbr("white_planks_clean", 1.0), L_SOLID, true, 0.0, true)
-	t += _layer(root, cols, dir, "roofs", _pbr("white_planks_clean", 1.0), L_WALK, true)
+	t += _layer(root, cols, dir, "walls", _pbr("white_planks_clean", 1.0), L_SOLID, false, 0.0, true)
+	t += _layer(root, cols, dir, "roofs", _pbr("white_planks_clean", 1.0), L_WALK, false)
 	t += _layer(root, cols, dir, "glass", _simple("villa_glass", Color(0.12, 0.18, 0.22), 0.05, 0.6), 0, false, 400.0)
 	t += _layer(root, cols, dir, "frames", _simple("villa_frame", Color(0.35, 0.25, 0.17), 0.6), 0, false, 300.0)
 	t += _layer(root, cols, dir, "thatch", _pbr("thatch_roof_angled", 1.0, Color(1.0, 0.86, 0.66)), 0, true)
@@ -894,8 +896,10 @@ func _build(zid: String) -> void:
 			0.0,
 			true
 		)
-		tri += _layer(root, cols, dir, "walls", _facade(), L_SOLID, true, 0.0, true)
-		tri += _layer(root, cols, dir, "roofs", _pbr("concrete_floor_02", 1.0, Color(0.82, 0.8, 0.78)), L_WALK, true)
+		# sin LOD automático: con muchas cajas por trozo el simplificador borraba edificios enteros
+		# a media distancia y los balcones/aires quedaban flotando
+		tri += _layer(root, cols, dir, "walls", _facade(), L_SOLID, false, 0.0, true)
+		tri += _layer(root, cols, dir, "roofs", _pbr("concrete_floor_02", 1.0, Color(0.82, 0.8, 0.78)), L_WALK, false)
 		tri += _layer(
 			root,
 			cols,

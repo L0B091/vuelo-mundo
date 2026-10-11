@@ -477,6 +477,13 @@ def build_zone(z, osm, l8, out_dir):
             return 1.0 if mid.distance(shop_lines) < 12.0 and math.dist(p0, p1) > 4.0 else 0.0
         return f
 
+    # huellas de edificios (para el test de props pegados a fachadas)
+    fp = [[[round(x, 2), round(y, 2)] for x, y in b["poly"].exterior.coords] + [[round(b["h"], 2)]]
+          for b in blds if b["poly"].geom_type == "Polygon" and rect.contains(b["poly"].centroid)]
+    fp_dir = REPO / "data/sites" / z.id
+    fp_dir.mkdir(parents=True, exist_ok=True)
+    with open(fp_dir / "footprints.json", "w") as f:
+        json.dump(fp, f, separators=(",", ":"))
     ad_slots = []
     for b in blds:
         g, h = b["poly"], b["h"]

@@ -3,6 +3,8 @@ extends RefCounted
 ## Catálogo de modelos listos para el detalle urbano (fuentes y licencias en assets/ASSETS.json).
 
 ## Modelos realistas de 3dassets.dev (CC0): tipo -> [archivo bajo assets/models/3da, tamaño mayor en m]
+## Props de fachada: se apoyan al ras de la pared (ver flush_back).
+const WALL_MOUNT := ["balcony", "ac", "shutter", "laundry_wall"]
 const PROP_SHADER := preload("res://shaders/prop_lib.gdshader")
 const PROP_RANGE := {
 	"lamp": [420.0, true],
@@ -318,3 +320,18 @@ static func signs(holder: Node3D, items: Array, cell: float) -> void:
 		mi.visibility_range_end = 160.0
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		holder.add_child(mi)
+
+
+## Lleva la cara trasera del modelo (z mínima; mira a +Z) a z = 0, al ras de la pared.
+static func flush_back(m: ArrayMesh) -> ArrayMesh:
+	var bb := m.get_aabb()
+	var out := ArrayMesh.new()
+	for si in m.get_surface_count():
+		var arr := m.surface_get_arrays(si)
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		for k in v.size():
+			v[k].z -= bb.position.z
+		arr[Mesh.ARRAY_VERTEX] = v
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out.surface_set_material(si, m.surface_get_material(si))
+	return out
