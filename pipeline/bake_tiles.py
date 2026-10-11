@@ -232,8 +232,10 @@ def bake_detail(stats):
     isl_small = write_geojson(small, WORK / "osm_islets.geojson")
     rf = write_geojson(reefs, WORK / "osm_reefs.geojson")
     ne = vector_to_3857([ne_path("ne_10m_land"), ne_path("ne_10m_minor_islands")], "ne_land_d")
-    land = rasterize(ne, ds, all_touched=False)
-    land |= rasterize(vector_to_3857([isl], "osm_islands"), ds, all_touched=False)
+    # Solo costas OSM: los polígonos de Natural Earth (minor_islands) inflaban cada atolón a
+    # manchas de arena de ~2 km (la "losa" junto a Malé y Hulhumalé). `ne` queda sin usar aquí.
+    del ne
+    land = rasterize(vector_to_3857([isl], "osm_islands"), ds, all_touched=False)
     land |= rasterize(vector_to_3857([isl_small], "osm_islets"), ds, all_touched=True)
     reef = rasterize(vector_to_3857([rf], "osm_reefs"), ds, all_touched=True)
     h = apply_mask_rules(a, land, reef)

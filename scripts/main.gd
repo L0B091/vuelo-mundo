@@ -21,7 +21,10 @@ extends Node3D
 ##   --quit-after=segundos       sale después de N segundos
 
 const ZONE_INDEX := "res://data/zone_index.json"
-const DEFAULT_START := [4.02, 73.36, 1400.0, 40.0]
+## Inicio: suspendido a 160 m al suroeste de Malé, mirando a la ciudad (rumbo 45°)
+const DEFAULT_START := [4.1625, 73.4965, 160.0, 45.0]
+## El recorrido automático sigue entrando desde el oeste a alta velocidad (prueba el streaming)
+const AUTOTEST_START := [4.02, 73.36, 1400.0, 40.0]
 const FOG_COLOR := Color(0.66, 0.78, 0.90)
 
 var world: WorldRoot
@@ -71,7 +74,7 @@ func _ready() -> void:
 	world.name = "World"
 	add_child(world)
 
-	var st: Array = DEFAULT_START.duplicate()
+	var st: Array = (AUTOTEST_START if args.has("autotest") else DEFAULT_START).duplicate()
 	if args.has("start"):
 		var parts: PackedStringArray = str(args.start).split(",")
 		for i in mini(parts.size(), 4):
@@ -85,7 +88,7 @@ func _ready() -> void:
 	world.add_child(avatar)
 	avatar.position = Vector3(0.0, float(st[2]) * Geo.scale_k(gp.n), 0.0)
 	avatar.heading_deg = float(st[3])
-	avatar.speed = float(args.get("speed", "90"))
+	avatar.speed = float(args.get("speed", "90" if args.has("start") or args.has("autotest") else "0"))
 	if args.has("pitch"):
 		avatar.look_pitch = float(args.pitch)
 	var cdef := CharacterDef.load_or_default()

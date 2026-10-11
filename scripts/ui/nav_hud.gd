@@ -14,6 +14,7 @@ var _tex: Texture2D
 var _geo: Dictionary = {}
 var _t: float = 0.0
 var _near: Dictionary = {}
+var _clock: float = 0.0
 
 
 func _ready() -> void:
@@ -27,6 +28,7 @@ func _ready() -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
+	_clock += dt
 	if _t > 1.0 / 15.0 and avatar != null:
 		_t = 0.0
 		_near = nearest()
@@ -132,7 +134,13 @@ func _draw() -> void:
 				v = v.normalized() * (MAP_R - 6)
 			var inr := d.length() < LAND_RANGE_M
 			var col := Color(0.3, 1, 0.4) if inr else Color(1, 0.8, 0.2)
-			draw_circle(c + v, 6.0 if inr else 4.5, col)
+			# icono de ciudad/zona: anillo que late + edificio (visible aunque quede en el borde)
+			var ph := fmod(_clock * 1.2, 1.0)
+			draw_arc(c + v, 7.0 + 9.0 * ph, 0, TAU, 24, Color(col, 0.9 * (1.0 - ph)), 2.5)
+			draw_circle(c + v, 8.0, Color(0, 0, 0, 0.6))
+			var p0 := c + v
+			draw_rect(Rect2(p0 + Vector2(-5, -2), Vector2(4, 7)), col)
+			draw_rect(Rect2(p0 + Vector2(0, -6), Vector2(5, 11)), col)
 	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -9), c + Vector2(-6, 7), c + Vector2(6, 7)]), Color.WHITE)
 	draw_string(
 		font, c + Vector2(-MAP_R, MAP_R + 18), "%s" % _fmt(map_range_m), HORIZONTAL_ALIGNMENT_CENTER, MAP_R * 2, 13

@@ -14,39 +14,43 @@ const LABELS: Dictionary = {"low": "Bajo", "medium": "Medio", "high": "Alto", "u
 const PROFILES: Dictionary = {
 	"low":
 	{
-		"fog_end_m": 45000.0,
-		"render_scale": 0.75,
+		"fog_end_m": 30000.0,
+		"render_scale": 0.7,
 		"shadows": true,
 		"shadow_size": 1024,
 		"msaa": 0,
 		"detail_mesh_step": 8,
 		"water_tex_div": 4,
 		"coarse_radius": 1,
-		"detail_radius_m": 80000.0,
+		"detail_radius_m": 50000.0,
 		"max_finalize_per_frame": 2,
-		"npc_pedestrians": 10,
-		"npc_riders": 4,
+		"npc_pedestrians": 6,
+		"npc_riders": 2,
 		"max_inflight": 2,
 		"finalize_budget_usec": 3000,
-		"collision_budget_usec": 2500
+		"collision_budget_usec": 2500,
+		"max_fps": 30,
+		"vis_scale": 0.5
 	},
 	"medium":
 	{
-		"fog_end_m": 90000.0,
-		"render_scale": 0.85,
+		"fog_end_m": 60000.0,
+		"render_scale": 0.8,
 		"shadows": true,
-		"shadow_size": 2048,
-		"msaa": 1,
+		"shadow_size": 1024,
+		"msaa": 0,
 		"detail_mesh_step": 4,
 		"water_tex_div": 2,
 		"coarse_radius": 1,
-		"detail_radius_m": 140000.0,
+		"detail_radius_m": 90000.0,
 		"max_finalize_per_frame": 3,
-		"npc_pedestrians": 20,
-		"npc_riders": 8,
+		"npc_pedestrians": 12,
+		"npc_riders": 4,
 		"max_inflight": 3,
 		"finalize_budget_usec": 3000,
-		"collision_budget_usec": 2500
+		"collision_budget_usec": 2500,
+		"max_fps": 30,
+		"vis_scale": 0.7
 	},
 	"high":
 	{
@@ -64,7 +68,9 @@ const PROFILES: Dictionary = {
 		"npc_riders": 16,
 		"max_inflight": 4,
 		"finalize_budget_usec": 3000,
-		"collision_budget_usec": 2500
+		"collision_budget_usec": 2500,
+		"max_fps": 60,
+		"vis_scale": 1.0
 	},
 	"ultra":
 	{
@@ -82,7 +88,9 @@ const PROFILES: Dictionary = {
 		"npc_riders": 24,
 		"max_inflight": 4,
 		"finalize_budget_usec": 3000,
-		"collision_budget_usec": 2500
+		"collision_budget_usec": 2500,
+		"max_fps": 60,
+		"vis_scale": 1.2
 	},
 }
 const SETTINGS_PATH := "user://settings.cfg"
@@ -116,7 +124,7 @@ func detect() -> void:
 		detected_name = res
 		detected_by = "table"
 	else:
-		detected_name = "medium"
+		detected_name = "low"  # sin datos del equipo: perfil fluido; la prueba de inicio puede subirlo
 		detected_by = "default"
 	detected_name = cap_by_ram(detected_name, float(device.ram_gb), _load_table())
 
@@ -202,6 +210,9 @@ func apply_to(viewport: Viewport, env: Environment, sun: DirectionalLight3D, cam
 	var wd := {"low": 0, "medium": 3, "high": 8, "ultra": 12}.get(current_name, 3) as int
 	RenderingServer.global_shader_parameter_set(&"water_detail", wd)
 	RenderingServer.global_shader_parameter_set(&"caustics_strength", 0.0 if current_name == "low" else 1.0)
+	# cuadros fijos (30 en bajo/medio, 60 en alto/ultra) con vsync: ritmo parejo, sin tirones
+	Engine.max_fps = int(p.get("max_fps", 60))
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 	viewport.scaling_3d_scale = float(p.render_scale)
 	# FSR 1 al escalar (más nítido que bilineal); FXAA donde no hay MSAA
 	viewport.scaling_3d_mode = (
@@ -221,7 +232,7 @@ func apply_to(viewport: Viewport, env: Environment, sun: DirectionalLight3D, cam
 		env.tonemap_mode = Environment.TONE_MAPPER_ACES
 		env.tonemap_exposure = 1.05
 		env.tonemap_white = 6.0
-		env.glow_enabled = current_name != "low"
+		env.glow_enabled = current_name in ["high", "ultra"]
 		env.glow_intensity = 0.35
 		env.glow_bloom = 0.03
 		env.glow_hdr_threshold = 1.1

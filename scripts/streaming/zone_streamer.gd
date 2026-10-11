@@ -112,7 +112,7 @@ func _poll() -> void:
 			rec["inst_out"] = []
 			var out: Array = rec.inst_out
 			rec["inst_task"] = WorkerThreadPool.add_task(
-				func() -> void: out.append(ps.instantiate()), true, "zona " + id
+				func() -> void: out.append(_scaled_ranges(ps.instantiate())), true, "zona " + id
 			)
 			continue
 		if rec.has("inst_task"):
@@ -235,3 +235,16 @@ func live_ids() -> PackedStringArray:
 
 func is_ready(id: String) -> bool:
 	return live.has(id) and live[id].state == "ready"
+
+
+## Distancias de dibujo de props/gente/coral según el perfil (bajo 0.5x, medio 0.7x): se aplica
+## en el hilo de instanciación, antes de entrar al árbol.
+static func _scaled_ranges(root: Node) -> Node:
+	var f := float(Quality.current.get("vis_scale", 1.0))
+	if absf(f - 1.0) < 0.01:
+		return root
+	for g: GeometryInstance3D in root.find_children("*", "GeometryInstance3D", true, false):
+		if g.visibility_range_end > 0.0:
+			g.visibility_range_end *= f
+			g.visibility_range_begin *= f
+	return root
