@@ -69,6 +69,7 @@ var cam_orbit_deg: float = 0.0
 var touch_stick: Vector2 = Vector2.ZERO  # x: giro/lateral, y: subir/avanzar (+ arriba)
 var touch_throttle: float = -1.0  # 0..1 o -1 si no se usa
 var touch_climb: float = 0.0  # -1..1
+var auto_land: bool = false  # "Aterrizar" desde lo alto: baja solo y aterriza al llegar
 ## Entrada programática (piloto automático de pruebas); se suma a la del jugador.
 var pilot_stick: Vector2 = Vector2.ZERO
 var pilot_climb: float = 0.0
@@ -305,6 +306,13 @@ func _fly(dt: float, k: float) -> void:
 		+ touch_stick.y
 		+ pilot_stick.y
 	)
+	if auto_land:
+		if absf(c) > 0.3:
+			auto_land = false  # el jugador retoma el control
+		else:
+			c = -1.0
+			speed = move_toward(speed, 40.0, 60.0 * dt)
+			request_land()
 	var climb_max := clampf(maxf(8.0, speed * 0.4), 8.0, 300.0)
 	if swimming:
 		climb_max = 4.0  # nado: subir/bajar lento
@@ -482,12 +490,16 @@ func request_land() -> void:
 		return
 	var hit := _ray_down(LAND_RAY * scale_k(), ground_mask())
 	if hit.is_empty():
-		message.emit("Demasiado alto para aterrizar: bajá a menos de %d m" % int(LAND_RAY))
+		if not auto_land:
+			message.emit("Descendiendo para aterrizar…")
+		auto_land = true
 		return
 	var col: CollisionObject3D = hit.collider
 	if col == null or (col.collision_layer & LAYER_WALKABLE) == 0:
+		auto_land = false
 		message.emit("Acá no hay calles modeladas: solo se aterriza en micro-mapas")
 		return
+	auto_land = false
 	_land_target_y = (hit.position as Vector3).y
 	state = State.LANDING
 	message.emit("Aterrizando…")

@@ -10,14 +10,15 @@ var main: Node
 var info: Label
 var msg: Label
 var stick: VirtualStick
-var throttle: VSlider
-var btn_land: Button
-var btn_boost: Button
-var btn_cam: Button
-var btn_up: Button
-var btn_down: Button
+var throttle: TouchSlider
+var btn_land: TouchButton
+var btn_boost: TouchButton
+var btn_cam: TouchButton
+var btn_up: TouchButton
+var btn_down: TouchButton
 var look_pad: Control
 var _msg_t: float = 0.0
+var _near_ground_t: float = 0.0
 var _look_touch: int = -1
 var _touch_start: Vector2
 var _touch_start_t: float = 0.0
@@ -60,18 +61,14 @@ func _ready() -> void:
 	stick.size = Vector2(220, 220)
 	root.add_child(stick)
 
-	throttle = VSlider.new()
+	throttle = TouchSlider.new()
 	throttle.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	throttle.position = Vector2(-80, -300)
-	throttle.size = Vector2(50, 260)
-	throttle.min_value = 0.0
-	throttle.max_value = 1.0
-	throttle.step = 0.01
-	throttle.tooltip_text = "Acelerador"
+	throttle.position = Vector2(-90, -320)
+	throttle.size = Vector2(70, 280)
 	root.add_child(throttle)
 
-	btn_up = _button(root, "▲", Vector2(-200, -300))
-	btn_down = _button(root, "▼", Vector2(-200, -200))
+	btn_up = _button(root, "▲", Vector2(-200, -320))
+	btn_down = _button(root, "▼", Vector2(-200, -220))  # mantener = descender
 	btn_land = _button(root, "Aterrizar", Vector2(-330, -100))
 	btn_land.size = Vector2(150, 70)
 	btn_land.pressed.connect(_on_land_pressed)
@@ -85,7 +82,7 @@ func _ready() -> void:
 	# confort: limita el alabeo de la cámara en primera persona (contra el mareo)
 	var btn_comfort := _button(root, "Conf", Vector2(-330, -480))
 	btn_comfort.toggle_mode = true
-	btn_comfort.button_pressed = true
+	btn_comfort.set_on(true)
 	btn_comfort.toggled.connect(
 		func(on: bool) -> void:
 			avatar.fp_roll_limit = 12.0 if on else 180.0
@@ -97,13 +94,12 @@ func _ready() -> void:
 	avatar.camera_mode_changed.connect(func(tp: bool) -> void: btn_cam.text = "1ª" if tp else "3ª")
 
 
-func _button(parent: Control, text: String, pos: Vector2) -> Button:
-	var b := Button.new()
+func _button(parent: Control, text: String, pos: Vector2) -> TouchButton:
+	var b := TouchButton.new()
 	b.text = text
 	b.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	b.position = pos
-	b.size = Vector2(90, 80)
-	b.add_theme_font_size_override("font_size", 22)
+	b.size = Vector2(100, 88)
 	parent.add_child(b)
 	return b
 
@@ -163,25 +159,28 @@ func _process(dt: float) -> void:
 		return
 	var flying := avatar.state != Avatar.State.WALK
 	avatar.touch_stick = stick.value
-	avatar.touch_climb = (1.0 if btn_up.button_pressed else 0.0) - (1.0 if btn_down.button_pressed else 0.0)
+	avatar.touch_climb = (1.0 if btn_up.held else 0.0) - (1.0 if btn_down.held else 0.0)
 	throttle.visible = flying
 	btn_up.visible = flying
 	btn_down.visible = flying
 	btn_boost.visible = flying
 	btn_land.text = "Aterrizar" if flying else "Despegar"
-	if flying and throttle.has_focus() or _throttle_touched():
+	if flying and throttle.active:
 		avatar.touch_throttle = throttle.value
 	else:
-		throttle.set_value_no_signal(avatar.speed / (Avatar.BOOST_SPEED if avatar.boost else Avatar.MAX_SPEED))
+		throttle.show_value(avatar.speed / (Avatar.BOOST_SPEED if avatar.boost else Avatar.MAX_SPEED))
 		avatar.touch_throttle = -1.0
+	# cerca del suelo y lento: ofrecer aterrizar (el botón late)
+	var agl: float = avatar.agl
+	if avatar.state == Avatar.State.FLY and agl < 25.0 and avatar.speed < 60.0:
+		_near_ground_t += dt
+		btn_land.modulate = Color(1, 1, 0.4).lerp(Color.WHITE, 0.5 + 0.5 * sin(_near_ground_t * 6.0))
+		if _near_ground_t < dt * 1.5:
+			show_message("Cerca del suelo: toca Aterrizar")
+	else:
+		_near_ground_t = 0.0
+		btn_land.modulate = Color.WHITE
 	_msg_t -= dt
 	msg.modulate.a = clampf(_msg_t, 0.0, 1.0)
 	if main and main.has_method("telemetry"):
 		info.text = main.telemetry()
-
-
-func _throttle_touched() -> bool:
-	return (
-		throttle.get_global_rect().has_point(throttle.get_viewport().get_mouse_position())
-		and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	)
