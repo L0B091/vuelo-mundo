@@ -55,8 +55,8 @@ const POSES := {
 		"DEF-shin.R": Vector3(0.0, -1.0, -0.06),
 		"DEF-foot.L": Vector3(0, -1.0, 0.1),
 		"DEF-foot.R": Vector3(0, -1.0, 0.1),
-		"DEF-head": Vector3(0, 0.75, 0.66),
-		"DEF-neck": Vector3(0, 0.85, 0.5),
+		"DEF-head": Vector3(0, 0.5, -0.87),
+		"DEF-neck": Vector3(0, 0.8, -0.6),
 	},
 	"fist":
 	{
@@ -71,8 +71,8 @@ const POSES := {
 		"DEF-shin.R": Vector3(0.0, -1.0, -0.05),
 		"DEF-foot.L": Vector3(0, -1.0, 0.05),
 		"DEF-foot.R": Vector3(0, -1.0, 0.05),
-		"DEF-head": Vector3(0, 0.7, 0.7),
-		"DEF-neck": Vector3(0, 0.8, 0.6),
+		"DEF-head": Vector3(0, 0.5, -0.87),
+		"DEF-neck": Vector3(0, 0.8, -0.6),
 	},
 	"land":
 	{
@@ -154,6 +154,13 @@ const HUMANOID_ALIAS := {
 var weights: Dictionary = {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "land": 0.0, "launch": 0.0}
 var fist_r: float = 0.0
 var female: bool = false
+## Enderezado de columna/cabeza (0..1) para cuerpos retargeteados cuya columna llega encorvada
+## (héroe Meshy con animaciones UAL): se aplica antes de las poses de vuelo.
+var posture: float = 0.0
+const POSTURE := {"DEF-spine.001": Vector3(0, 1, 0.04), "DEF-spine.002": Vector3(0, 1, 0.0),
+	"DEF-spine.003": Vector3(0, 1, -0.04), "DEF-neck": Vector3(0, 1, -0.05), "DEF-head": Vector3(0.13, 1, -0.02),  # la malla de Meshy trae la cabeza ladeada
+	"DEF-upper_arm.L": Vector3(0.16, -1, 0.0), "DEF-upper_arm.R": Vector3(-0.16, -1, 0.0),
+	"DEF-forearm.L": Vector3(0.08, -1, 0.12), "DEF-forearm.R": Vector3(-0.08, -1, 0.12)}
 var _ids: Dictionary = {}
 
 
@@ -186,6 +193,21 @@ func _process_modification() -> void:
 	var sk := get_skeleton()
 	if sk == null:
 		return
+	if posture > 0.001:
+		# las pistas de posición retargeteadas estiran cuello y hombros: huesos (salvo cadera) en reposo
+		var hips := _bone(sk, "DEF-hips")
+		for bi in sk.get_bone_count():
+			if bi != hips:
+				sk.set_bone_pose_position(bi, sk.get_bone_rest(bi).origin)
+		var fly := 0.0
+		for p: String in weights:
+			fly += float(weights[p])
+		var pw := posture * clampf(1.0 - fly, 0.0, 1.0)
+		if pw > 0.001:
+			for bname: String in POSTURE:
+				var pb := _bone(sk, bname)
+				if pb >= 0:
+					_aim(sk, pb, (POSTURE[bname] as Vector3).normalized(), minf(1.0, pw * (1.34 if bname in ["DEF-neck", "DEF-head"] else 1.0)))
 	var total := 0.0
 	for p: String in weights:
 		total += float(weights[p])

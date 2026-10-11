@@ -60,6 +60,7 @@ func setup(p_def: CharacterDef) -> void:
 	pose = FlightPose.new()
 	# el maniquí único se ajustaba para "femenino"; los cuerpos nuevos ya son distintos
 	pose.female = def.body == "female" and def.base_scene == CharacterDef.BASE_SCENE
+	pose.posture = 0.75 if def.original_look else 0.0
 	skeleton.add_child(pose)
 	_apply_look()
 	_play("idle")
