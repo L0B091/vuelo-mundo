@@ -11,7 +11,22 @@ const PERSON_POSES := {
 	"person_talk": "Idle_Talking_Loop",
 	"person_kid": "Dance_Loop"
 }
-const PERSON_BASE := "res://assets/characters/ual/AnimationLibrary_Godot_Standard.gltf"
+const PERSON_KINDS := [
+	"person_stand",
+	"person_sit",
+	"person_talk",
+	"person_kid",
+	"person_stand_f",
+	"person_sit_f",
+	"person_talk_f",
+	"person_kid_f"
+]
+const HERO_M := "res://assets/characters/superhero/Superhero_Male_FullBody.gltf"
+const HERO_F := "res://assets/characters/superhero/Superhero_Female_FullBody.gltf"
+const HERO_ANIMS := "res://assets/characters/superhero/UAL1_UE.glb"
+const MASK_M := "res://assets/characters/superhero/Superhero_Male_FullBody_suitmask.png"
+const MASK_F := "res://assets/characters/superhero/Superhero_Female_FullBody_suitmask.png"
+const CROWD_SHADER := preload("res://shaders/crowd_person.gdshader")
 const WALL_MOUNT := ["balcony", "ac", "shutter", "laundry_wall"]
 const PROP_SHADER := preload("res://shaders/prop_lib.gdshader")
 const PROP_RANGE := {
@@ -86,6 +101,10 @@ const PROP_RANGE := {
 	"person_sit": [110.0, false],
 	"person_talk": [140.0, false],
 	"person_kid": [120.0, false],
+	"person_stand_f": [140.0, false],
+	"person_sit_f": [110.0, false],
+	"person_talk_f": [140.0, false],
+	"person_kid_f": [120.0, false],
 	"shutter": [90.0, false],
 	"bollard": [60.0, false],
 	"buoy": [300.0, false],
@@ -369,38 +388,38 @@ static func flush_back(m: ArrayMesh) -> ArrayMesh:
 	return out
 
 
-## Hornea una pose del maniquí UAL (CC0, Quaternius) a una malla estática con color de vértice
-## (camisa blanca para teñir por instancia, pantalón oscuro). Necesita un nodo en el árbol.
+## Hornea una pose del cuerpo base texturizado (Universal Base Characters, CC0) a malla fija:
+## piel y pelo reales, ropa de calle pintada por instancia (shaders/crowd_person.gdshader).
+## kind termina en "_f" para el cuerpo femenino. Necesita un nodo en el árbol.
 static func person(kind: String, host: Node) -> ArrayMesh:
-	var body: Node3D = (load(PERSON_BASE) as PackedScene).instantiate()
+	var fem := kind.ends_with("_f")
+	var pose := str(PERSON_POSES[kind.trim_suffix("_f")])
+	var body: Node3D = (load(HERO_F if fem else HERO_M) as PackedScene).instantiate()
 	host.add_child(body)
-	var ap: AnimationPlayer = body.find_children("*", "AnimationPlayer", true, false)[0]
-	# pose aplicada a mano (el mixer no procesa dentro de un script de herramienta)
-	var anim := ap.get_animation(str(PERSON_POSES[kind]).trim_suffix("_Loop"))
-	var root := ap.get_node(ap.root_node)
+	var lib: Node = (load(HERO_ANIMS) as PackedScene).instantiate()
+	var ap: AnimationPlayer = lib.find_children("*", "AnimationPlayer", true, false)[0]
+	var anim := ap.get_animation(pose) if ap.has_animation(pose) else ap.get_animation(pose.trim_suffix("_Loop"))
+	var sk: Skeleton3D = body.find_children("*", "Skeleton3D", true, false)[0]
+	# pose aplicada a mano por nombre de hueso (el mixer no procesa en un script de herramienta)
 	for tr in anim.get_track_count():
-		var np := anim.track_get_path(tr)
-		var sk := root.get_node_or_null(NodePath(np.get_concatenated_names())) as Skeleton3D
-		if sk == null:
-			continue
-		var bone := sk.find_bone(np.get_concatenated_subnames())
+		var bone := sk.find_bone(anim.track_get_path(tr).get_concatenated_subnames())
 		if bone < 0:
 			continue
 		match anim.track_get_type(tr):
 			Animation.TYPE_ROTATION_3D:
 				sk.set_bone_pose_rotation(bone, anim.rotation_track_interpolate(tr, 0.4))
 			Animation.TYPE_POSITION_3D:
-				sk.set_bone_pose_position(bone, anim.position_track_interpolate(tr, 0.4))
-	for sk: Skeleton3D in body.find_children("*", "Skeleton3D", true, false):
-		sk.force_update_all_bone_transforms()
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				if bone == 0 or sk.get_bone_parent(bone) <= 0:
+					sk.set_bone_pose_position(bone, anim.position_track_interpolate(tr, 0.4))
+	lib.free()
+	sk.force_update_all_bone_transforms()
+	var out := ArrayMesh.new()
+	var hmax := 1.75
 	for mi: MeshInstance3D in body.find_children("*", "MeshInstance3D", true, false):
-		var sk := mi.get_node_or_null(mi.skeleton) as Skeleton3D
 		var skin := mi.skin
-		var xs := body.global_transform.affine_inverse() * (sk.global_transform if sk else mi.global_transform)
+		var xs := _rel(sk, body)
 		var binds: Array[Transform3D] = []
-		if sk != null and skin != null:
+		if skin != null:
 			for bi in skin.get_bind_count():
 				var bone := skin.get_bind_bone(bi)
 				if bone < 0:
@@ -412,13 +431,13 @@ static func person(kind: String, host: Node) -> ArrayMesh:
 			var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
 			var bo = arr[Mesh.ARRAY_BONES]
 			var we = arr[Mesh.ARRAY_WEIGHTS]
-			var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
-			var col := Color(1, 1, 1) if si == 0 else Color(0.24, 0.24, 0.28)
+			var nb := 4 if bo == null or bo.size() <= v.size() * 4 else 8
 			var pv := PackedVector3Array()
 			var pn := PackedVector3Array()
+			var uv2 := PackedVector2Array()
 			pv.resize(v.size())
 			pn.resize(v.size())
-			var nb := 4 if bo == null or bo.size() <= v.size() * 4 else 8
+			uv2.resize(v.size())
 			for k in v.size():
 				var p := Vector3.ZERO
 				var q := Vector3.ZERO
@@ -434,16 +453,59 @@ static func person(kind: String, host: Node) -> ArrayMesh:
 							q += (t.basis * nn[k]) * w
 				pv[k] = xs * p
 				pn[k] = (xs.basis * q).normalized()
-			for k in idx:
-				st.set_color(col)
-				st.set_normal(pn[k])
-				st.add_vertex(pv[k])
+				# altura y lateralidad de la pose de reposo (para que la ropa siga al cuerpo al sentarse)
+				var rest := _rel(mi, body) * v[k]
+				uv2[k] = Vector2(absf(rest.x), rest.y / hmax)
+			if v.is_empty():
+				continue
+			var res := [] as Array
+			res.resize(Mesh.ARRAY_MAX)
+			res[Mesh.ARRAY_VERTEX] = pv
+			res[Mesh.ARRAY_NORMAL] = pn
+			res[Mesh.ARRAY_TEX_UV] = arr[Mesh.ARRAY_TEX_UV]
+			res[Mesh.ARRAY_TEX_UV2] = uv2
+			res[Mesh.ARRAY_INDEX] = arr[Mesh.ARRAY_INDEX]
+			var mat := mi.get_active_material(si)
+			var bm := mat as StandardMaterial3D
+			if bm != null and str(bm.resource_name).contains("Superhero"):
+				var sm := ShaderMaterial.new()
+				sm.shader = CROWD_SHADER
+				sm.set_shader_parameter(&"base_tex", bm.albedo_texture)
+				sm.set_shader_parameter(&"normal_tex", bm.normal_texture)
+				sm.set_shader_parameter(&"rough_tex", bm.roughness_texture)
+				sm.set_shader_parameter(&"mask_tex", load(MASK_F if fem else MASK_M))
+				mat = sm
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, res)
+			out.surface_set_material(out.get_surface_count() - 1, mat)
 	body.queue_free()
-	st.index()
-	var mat := ShaderMaterial.new()
-	mat.shader = PROP_SHADER
-	mat.set_shader_parameter(&"roughness", 0.8)
-	mat.set_shader_parameter(&"grime", 0.15)
-	st.set_material(mat)
-	var m := decimate(st.commit(), 1200)
-	return m
+	return decimate(out, 2500)
+
+
+static func _rel(n: Node3D, top: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var c: Node = n
+	while c != null and c != top:
+		if c is Node3D:
+			t = (c as Node3D).transform * t
+		c = c.get_parent()
+	return t
+
+
+## Losa maciza de hormigón bajo la baranda del balcón (el modelo trae solo ménsulas, que se
+## recortan): el balcón apoya visualmente en la fachada en lugar de flotar.
+static func with_slab(m: ArrayMesh) -> ArrayMesh:
+	var bb := m.get_aabb()
+	var bx := BoxMesh.new()
+	bx.size = Vector3(bb.size.x + 0.1, 0.16, bb.size.z + 0.05)
+	var arr := bx.get_mesh_arrays()
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var col := PackedColorArray()
+	for k in v.size():
+		v[k] += Vector3(bb.get_center().x, bb.position.y - 0.08, bb.get_center().z + 0.025)
+		col.append(Color(0.78, 0.76, 0.72))
+	arr[Mesh.ARRAY_VERTEX] = v
+	arr[Mesh.ARRAY_COLOR] = col
+	var out := m.duplicate() as ArrayMesh
+	out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	out.surface_set_material(out.get_surface_count() - 1, m.surface_get_material(0))
+	return out

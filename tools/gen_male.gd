@@ -313,7 +313,7 @@ func _prop_mesh(kind: String) -> Mesh:
 	if _mats.has(key):
 		return _mats[key]
 	var mesh: Mesh
-	if PropCatalog.PERSON_POSES.has(kind):
+	if kind in PropCatalog.PERSON_KINDS:
 		mesh = PropCatalog.person(kind, get_root())
 	elif PropCatalog.DA3.has(kind):
 		var sc3: Node = (load("res://assets/models/3da/" + str(PropCatalog.DA3[kind][0])) as PackedScene).instantiate()
@@ -325,7 +325,7 @@ func _prop_mesh(kind: String) -> Mesh:
 			if bm != null:
 				bm.set_shader_parameter(&"bob", true)
 		if kind == "balcony":
-			mesh = PropCatalog.cut_below(mesh as ArrayMesh, 0.58)
+			mesh = PropCatalog.with_slab(PropCatalog.cut_below(mesh as ArrayMesh, 0.58))
 		if kind in PropCatalog.WALL_MOUNT:
 			mesh = PropCatalog.flush_back(mesh as ArrayMesh)
 	elif PropCatalog.KENNEY.has(kind):
@@ -455,7 +455,8 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				lst[b] = tmp
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.use_colors = kind == "scooter" or PropCatalog.PERSON_POSES.has(kind)
+			mm.use_colors = kind == "scooter" or kind in PropCatalog.PERSON_KINDS
+			mm.use_custom_data = kind in PropCatalog.PERSON_KINDS
 			mm.mesh = mesh
 			mm.instance_count = lst.size()
 			var org := Vector3(key.x * PROP_CELL, 0, key.y * PROP_CELL)
@@ -464,9 +465,15 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 				var b := Basis(Vector3.UP, float(it[3])).scaled(Vector3.ONE * float(it[4]))
 				mm.set_instance_transform(k, Transform3D(b, Vector3(it[0], it[1], it[2]) - org))
 				if mm.use_colors:
-					var pal_c: Array = NpcCrowd.SHIRTS if PropCatalog.PERSON_POSES.has(kind) else SCOOTER_COLORS
-					var ci := hash(Vector2(it[0], it[2])) % pal_c.size()
-					mm.set_instance_color(k, pal_c[ci])
+					if kind in PropCatalog.PERSON_KINDS:
+						var hh := hash(Vector2(it[0], it[2]))
+						var sh: Color = NpcCrowd.SHIRTS[hh % NpcCrowd.SHIRTS.size()]
+						sh.a = float((hh >> 8) % 3) / 2.0  # largo del pantalón: largo / 3/4 / corto
+						mm.set_instance_custom_data(k, sh)
+						mm.set_instance_color(k, NpcCrowd.PANTS[(hh >> 4) % NpcCrowd.PANTS.size()])
+					else:
+						var ci := hash(Vector2(it[0], it[2])) % SCOOTER_COLORS.size()
+						mm.set_instance_color(k, SCOOTER_COLORS[ci])
 			var mmi := MultiMeshInstance3D.new()
 			mmi.name = "%s_%d_%d" % [kind, key.x, key.y]
 			mmi.multimesh = mm

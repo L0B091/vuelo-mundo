@@ -681,15 +681,22 @@ def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
         for (px, pz) in _pts_in(a, n_people, int(a.area)):
             crowd(px, pz, _frac(px, pz, 65) * 6.28)
         for (px, pz) in _pts_in(a.buffer(-3), max(1, int(a.area / 2500)), int(a.area) + 7):
-            kind = ("ice_kiosk", "food_counter", "ice_cart", "ticket_kiosk")[int(_frac(px, pz, 66) * 4) % 4]
+            kind = ("ice_kiosk", "food_counter", "ice_cart", "ticket_kiosk", "truck", "truck")[int(_frac(px, pz, 66) * 6) % 6]
             yaw = _frac(pz, px, 67) * 6.28
-            Q[kind].append([px, Y, pz, yaw, 1.0])
             fx, fz = math.sin(yaw), math.cos(yaw)
+            if kind == "truck":
+                # camioneta de comida compuesta: furgón de reparto de costado, toldo y mostrador al frente
+                Q.setdefault("van", []).append([px - fx * 1.6, Y, pz - fz * 1.6, yaw + math.pi / 2, 1.0])
+                Q.setdefault("stall_roof", []).append([px - fx * 0.2, Y, pz - fz * 0.2, yaw, 1.0])
+                Q["food_counter"].append([px + fx * 0.3, Y, pz + fz * 0.3, yaw, 1.0])
+            else:
+                Q[kind].append([px, Y, pz, yaw, 1.0])
             n_q = int(3 + _frac(px, pz, 68) * 5)
             for q in range(n_q):  # fila frente al mostrador
                 crowd(px + fx * (2.0 + q * 0.75), pz + fz * (2.0 + q * 0.75), yaw + math.pi, "person_stand")
             Q["queue_post"].append([px + fx * 2.0 + fz * 0.7, Y, pz + fz * 2.0 - fx * 0.7, yaw, 1.0])
             Q["queue_post"].append([px + fx * (2.0 + n_q * 0.75) + fz * 0.7, Y, pz + fz * (2.0 + n_q * 0.75) - fx * 0.7, yaw, 1.0])
+            Q.setdefault("bin", []).append([px + fz * 2.2, Y, pz - fx * 2.2, yaw, 1.0])
         for (px, pz) in _pts_in(a, int(a.area / 300), int(a.area) + 11):
             kind = ("palm_lean", "palm_young", "sea_grape", "pandanus")[int(_frac(px, pz, 69) * 4) % 4]
             Q[kind].append([px, DECK_Y, pz, _frac(px, pz, 70) * 6.28, 0.85 + _frac(pz, px, 71) * 0.3])
@@ -744,7 +751,9 @@ def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
             crowd(px, pz, yaw, "person_talk")
             crowd(px + dx * 0.8, pz + dz * 0.8, yaw + math.pi)
     for k, lst in Q.items():
-        out[k] = out.get(k, []) + [[round(v, 3) for v in it] for it in lst]
+        for it in lst:  # mitad cuerpo femenino, mitad masculino
+            kk = k + "_f" if k.startswith("person_") and _frac(it[0], it[2], 90) < 0.5 else k
+            out[kk] = out.get(kk, []) + [[round(v, 3) for v in it]]
     print(z.id, "vida:", {k: len(v) for k, v in Q.items()})
     return out
 
