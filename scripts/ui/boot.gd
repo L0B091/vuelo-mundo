@@ -48,6 +48,11 @@ func _ready() -> void:
 	title.add_theme_font_size_override("font_size", 40)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
+	var build := Label.new()
+	build.text = BuildInfo.text()
+	build.add_theme_font_size_override("font_size", 14)
+	build.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(build)
 	info = Label.new()
 	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_theme_font_size_override("font_size", 18)

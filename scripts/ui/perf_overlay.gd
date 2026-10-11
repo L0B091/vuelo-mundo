@@ -51,8 +51,8 @@ func _process(dt: float) -> void:
 	var ctx := str(context.call()) if context.is_valid() else ""
 	var load := _loadavg()
 	_label.text = (
-		"%d fps  %.1f ms (peor %.1f)\n%d draws  %dk tris  %d obj\nRAM %.0f MB  VRAM %.0f MB\n%s"
-		% [Engine.get_frames_per_second(), avg, _worst, dc, int(pr / 1000.0), ob, sm, vm, ctx]
+		"%d fps  %.1f ms (peor %.1f)\n%d draws  %dk tris  %d obj\nRAM %.0f MB  VRAM %.0f MB\n%s\n%s"
+		% [Engine.get_frames_per_second(), avg, _worst, dc, int(pr / 1000.0), ob, sm, vm, ctx, BuildInfo.text()]
 	)
 	if _file != null:
 		_file.store_line(
