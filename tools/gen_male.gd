@@ -235,6 +235,10 @@ func _layer(
 func _palm_mesh() -> ArrayMesh:
 	if _mats.has("palm_mesh"):
 		return _mats.palm_mesh
+	# cocotero de biblioteca (3dassets.dev, CC0); el procedural queda de respaldo
+	if ResourceLoader.exists("res://assets/models/3da/palm_tall.glb"):
+		_mats.palm_mesh = _prop_mesh("palm_tall")
+		return _mats.palm_mesh
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	# tronco curvo, 8 lados
@@ -314,6 +318,12 @@ func _prop_mesh(kind: String) -> Mesh:
 		var m3 := PropCatalog.decimate(_merge_meshes(sc3), int(PropCatalog.DA3_TRIS.get(kind, 1000)))
 		mesh = PropCatalog.flatten(PropCatalog.fit_size(m3, float(PropCatalog.DA3[kind][1])))
 		sc3.free()
+		if kind in ["dhoni", "speedboat"]:
+			var bm := (mesh as ArrayMesh).surface_get_material(0) as ShaderMaterial
+			if bm != null:
+				bm.set_shader_parameter(&"bob", true)
+		if kind == "balcony":
+			mesh = PropCatalog.cut_below(mesh as ArrayMesh, 0.4)
 	elif PropCatalog.KENNEY.has(kind):
 		var sc: Node = (
 			(load("res://assets/models/kenney/" + str(PropCatalog.KENNEY[kind][0])) as PackedScene).instantiate()
@@ -410,6 +420,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 	holder.name = "Detalle"
 	root.add_child(holder)
 	var props: Dictionary = meta.props
+	PropCatalog.signs(holder, props.get("shop_signs", []), PROP_CELL)
 	var total := 0
 	for kind: String in PropCatalog.PROP_RANGE:
 		var all_items: Array = props.get(kind, [])

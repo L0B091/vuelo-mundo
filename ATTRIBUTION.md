@@ -139,3 +139,16 @@ A-frame pavement sign, container, pedestal crane, fishing boat (used as dhoni), 
 promenade railing. Per-file source URLs are in assets/ASSETS.json (ids "3da/..."). Files were
 dequantized with gltf-transform (KHR_mesh_quantization is not supported by Godot's importer),
 simplified with Godot LOD generation, vertex-compacted, and their materials baked to vertex colours.
+
+Additional 3dassets.dev CC0 models (found via the read-only API, https://3dassets.dev/skill.md):
+sodium street light, fruit & vegetable stall, market stall with awning, fish display slab, cafe
+table, cafe parasol, poolside sun lounger, stone planter, roller shutter, steel bollard, fairway
+buoy, seagull on post, coastal fishing trawler, manta ray, whale shark, green sea turtle, eagle ray,
+coral head, and from the "Tropical Island and Palm Trees" pack: coconut palms (tall/leaning/young),
+pandanus, banana clump, frangipani, sea grape, heliconia, coconut husk, driftwood, shell scatter,
+rockpool anemone, intertidal coral boulder. None carry a license.attributionText; per-file URLs
+in assets/ASSETS.json.
+
+Shop sign font: Noto Sans Thaana Bold, SIL Open Font License 1.1 (assets/fonts/OFL.txt),
+https://github.com/notofonts/thaana. Sign texts are generic trade names; the Dhivehi text has not
+been reviewed by a native speaker.

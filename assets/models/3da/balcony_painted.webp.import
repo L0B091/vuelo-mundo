@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://crjntv11yhvee"
+uid="uid://bd6aujpwtb48l"
 path="res://.godot/imported/balcony_painted.webp-354e7b0d385e15de5ae4b112f8c5940b.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "1b0bf33f856f6a570a3f8691045ad386"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

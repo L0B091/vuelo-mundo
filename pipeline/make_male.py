@@ -49,7 +49,7 @@ EXTRA_KINDS = ("taxi", "van", "delivery", "suv", "pickup", "traffic_light", "sig
                "elec_pole", "cone", "planter", "fruit_stand", "bread_stand", "freezer", "crate", "barrel",
                "shop_shelf", "cafe_table", "stool", "roof_tank", "antenna", "stall_roof", "fish_crate", "hydrant", "wood_crate", "utility_box", "manhole", "trashbag",
                "gas", "bananas", "tyre", "covered_car", "barrier", "hatchback", "laundry", "aframe", "container",
-               "crane") + TWO_WHEEL[:4] + TWO_WHEEL[6:]
+               "crane", "shutter", "frangipani", "banana_clump") + TWO_WHEEL[:4] + TWO_WHEEL[6:]
 
 
 def market_point(z):
@@ -628,6 +628,7 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
     fachadas que dan a la calle, árboles de vereda, y cables entre postes."""
     P = {k: [] for k in ("lamp", "scooter", "car", "bench", "bin", "chair", "plant", "ac", "balcony", "tree")
          + EXTRA_KINDS}
+    signs = []
     cables = []
     bld_union = prep(unary_union([b["poly"] for b in blds]) if blds else Polygon())
     bld_buf = prep(unary_union([b["poly"].buffer(1.5) for b in blds]) if blds else Polygon())
@@ -654,20 +655,20 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
             lamps_by_road.append(row)
         if veh:
             # motos estacionadas en racimos sobre ambos cordones
-            for x, zz, dx, dz in _along(g, 9.0, 3.0):
+            for x, zz, dx, dz in _along(g, 13.0, 3.0):
                 f = _frac(x, zz, 1)
-                if f < 0.35:
+                if f < 0.4:
                     continue
                 nx, nz = dz, -dx
                 for sd in (-1, 1):
-                    n_sc = int(2 + _frac(x, zz, sd) * (6 if hw in SHOP_ROADS else 4))
+                    n_sc = int(2 + _frac(x, zz, sd) * (5 if hw in SHOP_ROADS else 3))
                     for k in range(n_sc):
-                        t = (k - n_sc / 2) * 0.85
+                        t = (k - n_sc / 2) * 1.05
                         px = x + dx * t + nx * (w / 2 - 0.9) * sd
                         pz = zz + dz * t + nz * (w / 2 - 0.9) * sd
                         pt = Point(px, pz)
                         if rect.contains(pt) and land.contains(pt) and not bld_union.contains(pt):
-                            yaw = math.atan2(nx * sd, nz * sd) + (_frac(px, pz) - 0.5) * 0.35
+                            yaw = math.atan2(nx * sd, nz * sd) + (_frac(px, pz) - 0.5) * 0.12
                             sk = TWO_WHEEL[int(_frac(px, pz, 21) * len(TWO_WHEEL)) % len(TWO_WHEEL)]
                             P[sk].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
             if hw in SHOP_ROADS or hw in ("residential", "unclassified"):
@@ -711,7 +712,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                 px, pz = x + nx * (w / 2 + 0.9) * sd, zz + nz * (w / 2 + 0.9) * sd
                 pt = Point(px, pz)
                 if rect.contains(pt) and land.contains(pt) and not bld_buf.contains(pt):
-                    P["tree"].append([px, DECK_Y, pz, _frac(px, pz) * 6.28, 0.8 + _frac(pz, px) * 0.5])
+                    tk = ("tree", "frangipani", "banana_clump")[int(_frac(px, pz, 41) * 3) % 3]
+                    P[tk].append([px, DECK_Y, pz, _frac(px, pz) * 6.28, 0.8 + _frac(pz, px) * 0.5])
     # cruces: semáforos en las calles principales, carteles de pare en las demás
     ends = {}
     for hw, g, w, nm in road_info:
@@ -785,6 +787,12 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                         P["balcony"].append([cx + nx * 0.05, y, cz + nz * 0.05, yaw, 1.0])
                     elif f < 0.34:
                         P["ac"].append([cx + nx * 0.05 + ux * 1.0, y + 0.55, cz + nz * 0.05 + uz * 1.0, yaw, 1.0])
+                if street and c % 3 == 0 and _frac(cx, cz, 31) < 0.7:
+                    # letrero de comercio (atlas de 16, Dhivehi/inglés) sobre la vidriera
+                    signs.append([round(cx + nx * 0.12, 3), round(DECK_Y + FLOOR_H - 0.55, 3), round(cz + nz * 0.12, 3),
+                                  round(yaw, 4), int(_frac(cz, cx, 32) * 16) % 16])
+                if street and c % 3 == 2 and _frac(cx, cz, 33) < 0.5:
+                    P["shutter"].append([cx + nx * 0.06, DECK_Y + 0.02, cz + nz * 0.06, yaw, 1.0])
                 if street and c % 3 == 1:
                     f = _frac(cx, cz, 9)
                     if f < 0.25:
@@ -841,6 +849,7 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
         for q in range(10):
             P["tyre" if q % 2 else "barrier"].append([mk[0] - 6.0 + q * 2.4, DECK_Y + 0.03, mk[1] - 5.0, 0.0, 1.0])
     out = {k: [[round(v, 3) for v in it] for it in lst] for k, lst in P.items()}
+    out["shop_signs"] = signs
     out["cables"] = [[round(v, 2) for v in c] for c in cables]
     print(z.id, "detalle urbano:", {k: len(v) for k, v in out.items()})
     return out

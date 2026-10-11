@@ -3,6 +3,7 @@ extends RefCounted
 ## Catálogo de modelos listos para el detalle urbano (fuentes y licencias en assets/ASSETS.json).
 
 ## Modelos realistas de 3dassets.dev (CC0): tipo -> [archivo bajo assets/models/3da, tamaño mayor en m]
+const PROP_SHADER := preload("res://shaders/prop_lib.gdshader")
 const PROP_RANGE := {
 	"lamp": [420.0, true],
 	"scooter": [120.0, false],
@@ -60,9 +61,29 @@ const PROP_RANGE := {
 	"laundry": [160.0, false],
 	"aframe": [60.0, false],
 	"container": [600.0, true],
-	"crane": [1500.0, true]
+	"crane": [1500.0, true],
+	"shutter": [90.0, false],
+	"bollard": [60.0, false],
+	"buoy": [300.0, false],
+	"frangipani": [200.0, true],
+	"banana_clump": [160.0, true],
+	"pandanus": [200.0, true]
 }
 const DA3 := {
+	"palm_tall": ["palm_tall.glb", 9.0],
+	"lamp": ["lamp.glb", 6.5],
+	"fruit_stand": ["fruit_stand.glb", 2.2],
+	"stall_roof": ["stall_roof.glb", 3.2],
+	"fish_crate": ["fish_crate.glb", 2.4],
+	"cafe_table": ["cafe_table.glb", 1.4],
+	"parasol": ["parasol.glb", 2.6],
+	"lounger": ["lounger.glb", 2.0],
+	"shutter": ["shutter.glb", 2.8],
+	"bollard": ["bollard.glb", 1.0],
+	"buoy": ["buoy.glb", 1.6],
+	"frangipani": ["frangipani.glb", 3.5],
+	"banana_clump": ["banana_clump.glb", 3.0],
+	"pandanus": ["pandanus.glb", 4.0],
 	"scooter_a": ["scooter_a.glb", 1.82],
 	"scooter_b": ["scooter_b.glb", 1.82],
 	"scooter_c": ["scooter_c.glb", 1.85],
@@ -231,10 +252,69 @@ static func flatten(m: ArrayMesh) -> ArrayMesh:
 				st.set_normal(nn[k])
 			st.add_vertex(v[k])
 	st.index()
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = clampf(rough, 0.35, 0.95)
-	mat.metallic = clampf(metal, 0.0, 0.6)
+	var mat := ShaderMaterial.new()
+	mat.shader = PROP_SHADER
+	mat.set_shader_parameter(&"roughness", clampf(rough, 0.35, 0.95))
+	mat.set_shader_parameter(&"metallic", clampf(metal, 0.0, 0.6))
 	st.set_material(mat)
 	return st.commit()
+
+
+## Quita los triángulos que quedan enteros por debajo de `frac` de la altura (p. ej. la ménsula
+## bajo la losa del balcón, que se ve suelta contra la fachada).
+static func cut_below(m: ArrayMesh, frac: float) -> ArrayMesh:
+	var bb := m.get_aabb()
+	var y_cut := bb.position.y + bb.size.y * frac
+	var out := ArrayMesh.new()
+	for si in m.get_surface_count():
+		var arr := m.surface_get_arrays(si)
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		var keep := PackedInt32Array()
+		for k in range(0, idx.size(), 3):
+			if maxf(v[idx[k]].y, maxf(v[idx[k + 1]].y, v[idx[k + 2]].y)) > y_cut:
+				keep.append_array([idx[k], idx[k + 1], idx[k + 2]])
+		arr[Mesh.ARRAY_INDEX] = keep
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, compact(arr, keep))
+		out.surface_set_material(si, m.surface_get_material(si))
+	return out
+
+
+## Letreros de comercio: un MultiMesh por celda de cell con el índice del atlas en el dato
+## custom (la distancia de visibilidad se mide al centro de cada celda).
+static func signs(holder: Node3D, items: Array, cell: float) -> void:
+	if items.is_empty():
+		return
+	var q := QuadMesh.new()
+	q.size = Vector2(2.6, 0.65)
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://shaders/shop_sign.gdshader")
+	mat.set_shader_parameter(&"atlas", load("res://assets/textures/shop_signs.png"))
+	q.material = mat
+	var cells := {}
+	for it: Array in items:
+		var key := Vector2i(int(float(it[0]) / cell), int(float(it[2]) / cell))
+		if not cells.has(key):
+			cells[key] = []
+		cells[key].append(it)
+	for key: Vector2i in cells:
+		var lst: Array = cells[key]
+		var org := Vector3(key.x * cell, 0.0, key.y * cell)
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = true
+		mm.mesh = q
+		mm.instance_count = lst.size()
+		for k in lst.size():
+			var it: Array = lst[k]
+			var pos := Vector3(float(it[0]), float(it[1]), float(it[2])) - org
+			mm.set_instance_transform(k, Transform3D(Basis(Vector3.UP, float(it[3])), pos))
+			mm.set_instance_custom_data(k, Color(float(it[4]), 0, 0, 0))
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "Letreros_%d_%d" % [key.x, key.y]
+		mi.multimesh = mm
+		mi.position = org
+		mi.custom_aabb = AABB(Vector3(-10, -5, -10), Vector3(cell + 20, 40, cell + 20))
+		mi.visibility_range_end = 160.0
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_child(mi)

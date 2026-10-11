@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dqocst6gym1ad"
+uid="uid://c7fex3sj3elkd"
 path="res://.godot/imported/laundry_concrete.webp-d6f0220a0ad2f53d6a3522f2f5e2feb2.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "26b089a1cc5563ca23f45061631f868b"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

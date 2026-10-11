@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dv6yhl1ledum6"
+uid="uid://b0gahlvoeijci"
 path="res://.godot/imported/aframe_wood.webp-84d416552ca54a5f2c706c0b63fb28bf.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "d624431e74db80c4c0555beef4bd1cac"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

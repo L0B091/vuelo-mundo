@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blnhyaeuwkjx3"
+uid="uid://ja10g5od3fno"
 path="res://.godot/imported/dish_concrete.webp-9e51b73d1a9443ee295e39d942dd32e0.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "26b089a1cc5563ca23f45061631f868b"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

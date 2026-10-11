@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://de2cnha2yi7b7"
+uid="uid://c03bhjxw5biqa"
 path="res://.godot/imported/boat_fishing_painted.webp-3ef65648d26bdde24ed0636454d8a3f2.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "1b0bf33f856f6a570a3f8691045ad386"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -2,13 +2,10 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://y304cpabpch2"
+uid="uid://bta1dy7nq81uu"
 path="res://.godot/imported/laundry_painted.webp-7bcf90a97ac36e4c105a24d8a8d39ca3.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "1b0bf33f856f6a570a3f8691045ad386"
 }
 
 [deps]
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

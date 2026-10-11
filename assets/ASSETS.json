@@ -779,5 +779,427 @@
   ],
   "license": "CC0 1.0",
   "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/lamp",
+  "kind": "model",
+  "name": "Sodium Street Light (Halloween Slasher Street)",
+  "source": "https://3dassets.dev/assets/halloween-slasher-street-sodium-street-light-4cc0541b",
+  "file": "https://cdn.3dassets.dev/assets/27277/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/fruit_stand",
+  "kind": "model",
+  "name": "Fruit and Vegetable Stall (Indian Bazaar Street and Temple)",
+  "source": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-fruit-and-vegetable-st-280ccd20",
+  "file": "https://cdn.3dassets.dev/assets/36547/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/stall_roof",
+  "kind": "model",
+  "name": "Market Stall With Awning (Canal Town and Windmill)",
+  "source": "https://3dassets.dev/assets/canal-town-and-windmill-market-stall-with-awning-a330661e",
+  "file": "https://cdn.3dassets.dev/assets/36677/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/fish_crate",
+  "kind": "model",
+  "name": "Fish display slab, 2.4 m (Fish Market and Trawler Quay)",
+  "source": "https://3dassets.dev/assets/fish-market-and-trawler-quay-fish-market-and-trawler-q-73821091",
+  "file": "https://cdn.3dassets.dev/assets/37283/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/cafe_table",
+  "kind": "model",
+  "name": "Four person cafe table (Cafe, Bakery and Coffee Bar)",
+  "source": "https://3dassets.dev/assets/bakery-and-cafe-cafe-table-4-person-bf74a9a9",
+  "file": "https://cdn.3dassets.dev/assets/22202/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/parasol",
+  "kind": "model",
+  "name": "Cafe Parasol (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-cafe-parasol-a99c4044",
+  "file": "https://cdn.3dassets.dev/assets/37090/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/lounger",
+  "kind": "model",
+  "name": "Poolside sun lounger (Hotel and Resort Operations)",
+  "source": "https://3dassets.dev/assets/hotel-and-resort-operations-sun-lounger-5497fc1c",
+  "file": "https://cdn.3dassets.dev/assets/25942/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/planter",
+  "kind": "model",
+  "name": "Stone Planter (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-stone-planter-5303d8e8",
+  "file": "https://cdn.3dassets.dev/assets/37098/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/shutter",
+  "kind": "model",
+  "name": "Roller Shutter (Pharmacy and High Street Chemist)",
+  "source": "https://3dassets.dev/assets/pharmacy-and-high-street-chemist-roller-shutter-be59b11c",
+  "file": "https://cdn.3dassets.dev/assets/37501/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/bollard",
+  "kind": "model",
+  "name": "Steel protection bollard (Car Park and Road Vehicle Fleet)",
+  "source": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-bollard-e7119d33",
+  "file": "https://cdn.3dassets.dev/assets/32559/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/buoy",
+  "kind": "model",
+  "name": "Fairway buoy (Marina and Yacht Club)",
+  "source": "https://3dassets.dev/assets/marina-and-yacht-club-marina-and-yacht-club-fairway-bu-b52749ba",
+  "file": "https://cdn.3dassets.dev/assets/38326/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/seagull",
+  "kind": "model",
+  "name": "Seagull on a mooring post (Amusement Arcade and Seaside Pier)",
+  "source": "https://3dassets.dev/assets/amusement-arcade-and-seaside-pier-seagull-on-post-ff283d63",
+  "file": "https://cdn.3dassets.dev/assets/35400/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/palm",
+  "kind": "model",
+  "name": "Tree fern, 2.8 m (Botanical Glasshouse and Palm House)",
+  "source": "https://3dassets.dev/assets/botanical-glasshouse-and-palm-house-botanical-glasshou-50b3c76a",
+  "file": "https://cdn.3dassets.dev/assets/38578/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/manta",
+  "kind": "model",
+  "name": "manta ray (Ocean Animals: Whales, Sharks and Fish)",
+  "source": "https://3dassets.dev/assets/open-ocean-and-deep-sea-life-manta-ray-fab4463c",
+  "file": "https://cdn.3dassets.dev/assets/5878/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/whale_shark",
+  "kind": "model",
+  "name": "whale shark (Ocean Animals: Whales, Sharks and Fish)",
+  "source": "https://3dassets.dev/assets/open-ocean-and-deep-sea-life-whale-shark-4fb7587f",
+  "file": "https://cdn.3dassets.dev/assets/5864/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/turtle",
+  "kind": "model",
+  "name": "green sea turtle (Ocean Animals: Whales, Sharks and Fish)",
+  "source": "https://3dassets.dev/assets/open-ocean-and-deep-sea-life-green-sea-turtle-6b07ba8e",
+  "file": "https://cdn.3dassets.dev/assets/5881/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/eagle_ray",
+  "kind": "model",
+  "name": "eagle ray (Ocean Animals: Whales, Sharks and Fish)",
+  "source": "https://3dassets.dev/assets/open-ocean-and-deep-sea-life-eagle-ray-c5cabcdb",
+  "file": "https://cdn.3dassets.dev/assets/5880/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/coral_head",
+  "kind": "model",
+  "name": "coral head (Ocean Giants: Whales, Dolphins, Sharks and Reef Life)",
+  "source": "https://3dassets.dev/assets/ocean-giants-kit-coral-head-b7209154",
+  "file": "https://cdn.3dassets.dev/assets/39365/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/trawler",
+  "kind": "model",
+  "name": "Coastal fishing trawler (Vehicle Collection HD: Cars, Planes and Boats)",
+  "source": "https://3dassets.dev/assets/transport-collection-hd-fishing-trawler-9644a09d",
+  "file": "https://cdn.3dassets.dev/assets/18727/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null,
+  "ai": null,
+  "note": "3dassets.dev; AI-assisted per contributor report when ai set"
+ },
+ {
+  "id": "3da/palm_tall",
+  "kind": "model",
+  "name": "Tall coconut palm (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-coconut-palm-tall-7b181376",
+  "file": "https://cdn.3dassets.dev/assets/6797/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/palm_lean",
+  "kind": "model",
+  "name": "Leaning shore coconut palm (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-coconut-palm-leaning-5caeaac8",
+  "file": "https://cdn.3dassets.dev/assets/6796/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/palm_young",
+  "kind": "model",
+  "name": "Young coconut palm (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-coconut-palm-young-20e8a037",
+  "file": "https://cdn.3dassets.dev/assets/6798/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/pandanus",
+  "kind": "model",
+  "name": "Branched screwpine (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-pandanus-fc8c388b",
+  "file": "https://cdn.3dassets.dev/assets/6804/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/banana_clump",
+  "kind": "model",
+  "name": "Banana clump (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-banana-clump-4c90f975",
+  "file": "https://cdn.3dassets.dev/assets/6822/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/frangipani",
+  "kind": "model",
+  "name": "Forked frangipani (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-frangipani-3b6c594b",
+  "file": "https://cdn.3dassets.dev/assets/6821/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/sea_grape",
+  "kind": "model",
+  "name": "Sea grape shrub (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-sea-grape-1a272ba5",
+  "file": "https://cdn.3dassets.dev/assets/6819/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/heliconia",
+  "kind": "model",
+  "name": "Heliconia clump (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-heliconia-d7a5774f",
+  "file": "https://cdn.3dassets.dev/assets/6823/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/coconut_husk",
+  "kind": "model",
+  "name": "Coconut husk debris (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-coconut-husk-6921b1b3",
+  "file": "https://cdn.3dassets.dev/assets/6836/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/driftwood",
+  "kind": "model",
+  "name": "Driftwood log (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-driftwood-log-e94178b1",
+  "file": "https://cdn.3dassets.dev/assets/6837/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/shells",
+  "kind": "model",
+  "name": "Beach shell scatter (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-shell-scatter-a55528d8",
+  "file": "https://cdn.3dassets.dev/assets/6835/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/anemone",
+  "kind": "model",
+  "name": "Rock-pool anemone (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-rockpool-anemone-9441c9a9",
+  "file": "https://cdn.3dassets.dev/assets/6851/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
+ },
+ {
+  "id": "3da/coral_boulder",
+  "kind": "model",
+  "name": "Intertidal coral boulder (Tropical Island and Palm Trees)",
+  "source": "https://3dassets.dev/assets/tropical-island-ecology-intertidal-coral-boulder-a0bac059",
+  "file": "https://cdn.3dassets.dev/assets/6849/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0 Universal",
+  "attributionText": null
  }
 ]
