@@ -685,10 +685,8 @@ def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
             yaw = _frac(pz, px, 67) * 6.28
             fx, fz = math.sin(yaw), math.cos(yaw)
             if kind == "truck":
-                # camioneta de comida compuesta: furgón de reparto de costado, toldo y mostrador al frente
-                Q.setdefault("van", []).append([px - fx * 1.6, Y, pz - fz * 1.6, yaw + math.pi / 2, 1.0])
-                Q.setdefault("stall_roof", []).append([px - fx * 0.2, Y, pz - fz * 0.2, yaw, 1.0])
-                Q["food_counter"].append([px + fx * 0.3, Y, pz + fz * 0.3, yaw, 1.0])
+                # camioneta de comida (Meshy) con la ventanilla hacia la fila
+                Q.setdefault("food_truck", []).append([px - fx * 1.2, Y, pz - fz * 1.2, yaw, 1.0])
             else:
                 Q[kind].append([px, Y, pz, yaw, 1.0])
             n_q = int(3 + _frac(px, pz, 68) * 5)
@@ -750,9 +748,32 @@ def life_props(out, z, parks, squares, beaches, piers, land, rect, road_info):
             yaw = math.atan2(dx, dz)
             crowd(px, pz, yaw, "person_talk")
             crowd(px + dx * 0.8, pz + dz * 0.8, yaw + math.pi)
+    # mascotas: gatos junto a puestos y veredas, perros en la playa y muelles; juguetes junto a los chicos
+    for it in Q["person_stand"][::9]:
+        Q.setdefault("cat", []).append([it[0] + 1.2, Y, it[2] + 0.6, it[3] + 1.3, 0.9 + _frac(it[0], it[2], 91) * 0.25])
+    for it in Q["person_kid"]:
+        f = _frac(it[0], it[2], 92)
+        if f < 0.35:
+            Q.setdefault("beach_ball", []).append([it[0] + 1.4, it[1] + 0.22, it[2] + 0.4, f * 9, 1.0])
+        elif f < 0.6:
+            Q.setdefault("sand_toys", []).append([it[0] + 0.6, it[1], it[2] - 0.5, f * 9, 1.0])
+        elif f < 0.7:
+            Q.setdefault("dog", []).append([it[0] - 2.0, it[1], it[2] + 1.0, f * 9, 1.0])
+    MESHY_ADULT = ("m_man", "m_woman", "m_tourist", "m_man", "m_woman", "m_fisher")
+
+    def remap(k, it):
+        f = _frac(it[0], it[2], 90)
+        if k in ("person_stand", "person_talk") and f < 0.6:  # 60% gente Meshy, 40% cuerpos UAL con poses
+            return MESHY_ADULT[int(f / 0.6 * 6) % 6]
+        if k == "person_sit" and f < 0.6:
+            return "m_sit"
+        if k == "person_kid" and f < 0.8:
+            return "m_boy" if f < 0.4 else "m_girl"
+        return k + "_f" if k.startswith("person_") and f > 0.8 else k
+
     for k, lst in Q.items():
-        for it in lst:  # mitad cuerpo femenino, mitad masculino
-            kk = k + "_f" if k.startswith("person_") and _frac(it[0], it[2], 90) < 0.5 else k
+        for it in lst:
+            kk = remap(k, it)
             out[kk] = out.get(kk, []) + [[round(v, 3) for v in it]]
     print(z.id, "vida:", {k: len(v) for k, v in Q.items()})
     return out

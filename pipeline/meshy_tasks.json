@@ -1,0 +1,119 @@
+{
+ "man": {
+  "preview": "01a128c7-ec1e-724d-969b-2b4016fec760",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c8-43a4-73c6-9e75-cce84a570cfd",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/man.glb"
+ },
+ "woman": {
+  "preview": "01a128c9-29b2-7776-acad-1f28a4aa9714",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-87f3-767e-bf6e-0dbe63d96f90",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/woman.glb"
+ },
+ "boy": {
+  "preview": "01a128c9-310d-7304-883d-356f5852e3fa",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-8f41-75d6-8411-d45069941d8a",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/boy.glb"
+ },
+ "girl": {
+  "preview": "01a128c9-3ca1-742c-8a64-e774060b2231",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-95cb-7719-8782-fbebfe93b367",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/girl.glb"
+ },
+ "tourist": {
+  "preview": "01a128c9-471e-757e-81d5-3d03856ced37",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-c380-7333-a105-0f523057625c",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/tourist.glb"
+ },
+ "fisherman": {
+  "preview": "01a128c9-51c2-71eb-9c78-1e65fd4642a0",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-cbc4-72d3-a16d-9ddc04783275",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/fisherman.glb"
+ },
+ "sitting": {
+  "preview": "01a128c9-5cb9-7243-abac-ac099d389a3a",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-d228-72ec-8cd5-9a4e0a2db836",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/sitting.glb"
+ },
+ "cat": {
+  "preview": "01a128c9-633e-7573-a42b-22e5442f9d84",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-d31c-71f4-bf8b-9d297270a574",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/cat.glb"
+ },
+ "dog": {
+  "preview": "01a128c9-6939-736a-870b-ac2c82825497",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-d9a7-73f6-abf9-b4870b61019a",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/dog.glb"
+ },
+ "ball": {
+  "preview": "01a128c9-6ef3-732d-8bf5-2afdc3b89bff",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-e016-7085-b572-28ec540da3a0",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/ball.glb"
+ },
+ "sand_toys": {
+  "preview": "01a128c9-74ed-72e2-a640-43e0d693df15",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-eba4-7418-9a4e-2fc17a9bb3be",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/sand_toys.glb"
+ },
+ "food_truck": {
+  "preview": "01a128c9-7b6e-740a-ac11-a02b5b06d1ee",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-f27d-7473-a977-6f085df6059d",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/food_truck.glb"
+ },
+ "dhoni": {
+  "preview": "01a128c9-8133-7790-8933-46ce2522cbf2",
+  "preview_status": "SUCCEEDED",
+  "preview_credits": 5,
+  "refine": "01a128c9-f9b9-7212-af3a-5ffa5ac0ec11",
+  "refine_status": "SUCCEEDED",
+  "refine_credits": 10,
+  "file": "/workspace/meshy/dhoni.glb"
+ }
+}

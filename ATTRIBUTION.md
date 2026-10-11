@@ -156,3 +156,6 @@ been reviewed by a native speaker.
 ### 3dassets.dev (CC0 1.0), additional props
 - Ice cream kiosk, ice cream cart, ferry terminal kiosk, food court counter, queue barrier: https://3dassets.dev (CC0 1.0). Sources listed in assets/ASSETS.json.
 - Static crowd poses are baked from Quaternius Universal Animation Library mannequin (CC0).
+
+### Modelos generados con Meshy (text-to-3D)
+- `assets/models/meshy/*.glb`: hombre, mujer, turista, pescador, niño, niña, hombre sentado, gato, perro, pelota de playa, juguetes de arena, camioneta de comida, dhoni. Generados con la API de Meshy (https://www.meshy.ai, modelo meshy-t2 + textura), cuenta paga del usuario. Licencia: según los Términos de Servicio de Meshy, los resultados de un plan pago pertenecen al titular de la cuenta (los del plan gratuito serían CC BY 4.0 con atribución a Meshy). Esto se dedujo de que la cuenta tiene créditos de suscripción mensual; conviene confirmarlo en la página de suscripción. Prompts e ids de tarea: `pipeline/meshy_tasks.json`. Costo: 195 créditos.

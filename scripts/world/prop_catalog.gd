@@ -102,6 +102,18 @@ const PROP_RANGE := {
 	"person_talk": [140.0, false],
 	"person_kid": [120.0, false],
 	"person_stand_f": [140.0, false],
+	"m_man": [150.0, false],
+	"m_woman": [150.0, false],
+	"m_tourist": [150.0, false],
+	"m_fisher": [150.0, false],
+	"m_boy": [120.0, false],
+	"m_girl": [120.0, false],
+	"m_sit": [120.0, false],
+	"cat": [70.0, false],
+	"dog": [90.0, false],
+	"beach_ball": [70.0, false],
+	"sand_toys": [50.0, false],
+	"food_truck": [300.0, true],
 	"person_sit_f": [110.0, false],
 	"person_talk_f": [140.0, false],
 	"person_kid_f": [120.0, false],
@@ -161,6 +173,24 @@ const DA3 := {
 	"railing": ["railing.glb", 3.0],
 }
 ## tope de triángulos de los modelos 3dassets tras simplificar
+## Modelos generados con Meshy (text-to-3D, cuenta paga del usuario; ver ATTRIBUTION.md):
+## gente local y turistas, chicos, mascotas, juguetes de playa, camioneta de comida y dhoni.
+const MESHY := {
+	"m_man": ["man.glb", 1.72],
+	"m_woman": ["woman.glb", 1.62],
+	"m_tourist": ["tourist.glb", 1.68],
+	"m_fisher": ["fisherman.glb", 1.7],
+	"m_boy": ["boy.glb", 1.25],
+	"m_girl": ["girl.glb", 1.18],
+	"m_sit": ["sitting.glb", 1.25],
+	"cat": ["cat.glb", 0.5],
+	"dog": ["dog.glb", 0.8],
+	"beach_ball": ["ball.glb", 0.45],
+	"sand_toys": ["sand_toys.glb", 0.35],
+	"food_truck": ["food_truck.glb", 4.6],
+	"dhoni": ["dhoni.glb", 12.0]
+}
+const MESHY_TRIS := {"food_truck": 4000, "dhoni": 4000}
 const DA3_TRIS := {"bicycle": 900, "car": 1500, "taxi": 1500, "hatchback": 1500, "crane": 2500, "dhoni": 2500}
 const PH_MODEL := {
 	"bin": "metal_trash_can",

@@ -315,6 +315,13 @@ func _prop_mesh(kind: String) -> Mesh:
 	var mesh: Mesh
 	if kind in PropCatalog.PERSON_KINDS:
 		mesh = PropCatalog.person(kind, get_root())
+	elif PropCatalog.MESHY.has(kind):
+		var scm: Node = (
+			(load("res://assets/models/meshy/" + str(PropCatalog.MESHY[kind][0])) as PackedScene).instantiate()
+		)
+		var mm0 := PropCatalog.decimate(_merge_meshes(scm), int(PropCatalog.MESHY_TRIS.get(kind, 2500)))
+		mesh = PropCatalog.fit_size(mm0, float(PropCatalog.MESHY[kind][1]))
+		scm.free()
 	elif PropCatalog.DA3.has(kind):
 		var sc3: Node = (load("res://assets/models/3da/" + str(PropCatalog.DA3[kind][0])) as PackedScene).instantiate()
 		var m3 := PropCatalog.decimate(_merge_meshes(sc3), int(PropCatalog.DA3_TRIS.get(kind, 1000)))
