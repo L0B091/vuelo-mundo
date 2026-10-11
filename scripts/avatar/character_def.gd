@@ -24,7 +24,7 @@ const SAVE_PATH := "user://character.tres"
 @export var base_scene: String = HERO_MALE
 ## Escena de donde se toman las animaciones si la malla base no trae AnimationPlayer.
 @export var anim_scene: String = HERO_ANIMS
-@export_enum("classic", "color", "metal", "stealth") var suit_style: String = "color"
+@export_enum("classic", "color", "metal", "stealth", "business") var suit_style: String = "color"
 @export var height_scale: float = 1.0
 ## true: se usa el material/textura original del modelo (sin traje teñido, pelo ni capa generados)
 @export var original_look: bool = false
@@ -41,11 +41,16 @@ static func preset(kind: String) -> CharacterDef:
 	var d := CharacterDef.new()
 	d.body = kind
 	if kind == "male":
-		d.base_scene = MESHY_HERO
-		d.anim_scene = HUMANOID_ANIMS
-		d.original_look = true
-		d.hair_style = "none"
-		d.accessories = PackedStringArray()
+		# hombre joven de traje sobre el cuerpo Quaternius (rig humanoide completo con dedos,
+		# mismas animaciones UAL sin retargeting): el héroe Meshy deformaba cuello y hombros
+		d.base_scene = HERO_MALE
+		d.suit_style = "business"
+		d.suit_color = Color(0.12, 0.125, 0.14)
+		d.accent_color = Color(0.13, 0.17, 0.38)
+		d.skin_color = Color(0.80, 0.62, 0.50)
+		d.hair_style = "short"
+		d.hair_color = Color(0.06, 0.045, 0.035)
+		d.accessories = PackedStringArray(["glasses"])
 	if kind == "female":
 		d.base_scene = HERO_FEMALE
 		d.height_scale = 1.0
@@ -61,7 +66,7 @@ static func load_or_default() -> CharacterDef:
 	if ResourceLoader.exists(SAVE_PATH):
 		var d := ResourceLoader.load(SAVE_PATH) as CharacterDef
 		if d != null:
-			if d.body == "male" and d.base_scene == HERO_MALE:
+			if d.body == "male" and (d.base_scene == MESHY_HERO or (d.base_scene == HERO_MALE and d.suit_style != "business")):
 				return preset("male")  # guardado de una versión anterior: pasa al protagonista nuevo
 			return d
 	return preset("male")

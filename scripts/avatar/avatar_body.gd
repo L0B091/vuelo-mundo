@@ -66,6 +66,10 @@ func setup(p_def: CharacterDef) -> void:
 	_play("idle")
 
 
+const BUSINESS_SHADER := preload("res://shaders/hero_business.gdshader")
+const GLASSES_POS := Vector3(0, 0.098, 0.105)
+
+
 func _apply_look() -> void:
 	if def.original_look:
 		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
@@ -73,6 +77,8 @@ func _apply_look() -> void:
 		return
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		if def.suit_style == "business" and mi.skin != null and mi.mesh.get_aabb().size.y > 1.0:
+			mi.mesh = _with_rest_attrs(mi.mesh as ArrayMesh)
 		for s in mi.mesh.get_surface_count():
 			var src := mi.mesh.surface_get_material(s)
 			mi.set_surface_override_material(s, _suit_material(src))
@@ -81,6 +87,8 @@ func _apply_look() -> void:
 		match acc:
 			"cape":
 				_attach_cape()
+			"glasses":
+				_attach_glasses()
 			"belt":
 				_attach_ring("DEF-spine.001", 0.17, 0.05, def.accent_color, Vector3(0, 0.02, 0))
 			"wristbands":
@@ -101,6 +109,10 @@ func _anim_name(n: String) -> String:
 func _suit_material(src: Material) -> Material:
 	var name := src.resource_name if src != null else ""
 	if src is BaseMaterial3D and (name.contains("Eye") or name.contains("Hair")):
+		if name.contains("Hair") and def.suit_style == "business":
+			var hb := (src as BaseMaterial3D).duplicate() as BaseMaterial3D
+			hb.albedo_color = def.hair_color * 3.0
+			return hb
 		return src
 	if not (src is BaseMaterial3D):
 		# maniquí sin texturas (UAL): colores planos de traje/acento
@@ -112,6 +124,17 @@ func _suit_material(src: Material) -> Material:
 		m.rim = 0.25
 		return m
 	var mask_path := def.base_scene.get_basename() + "_suitmask.png"
+	if def.suit_style == "business" and ResourceLoader.exists(mask_path):
+		var b0 := src as BaseMaterial3D
+		var bs := ShaderMaterial.new()
+		bs.shader = BUSINESS_SHADER
+		bs.set_shader_parameter(&"base_tex", b0.albedo_texture)
+		bs.set_shader_parameter(&"normal_tex", b0.normal_texture)
+		bs.set_shader_parameter(&"rough_tex", b0.roughness_texture)
+		bs.set_shader_parameter(&"mask_tex", load(mask_path))
+		bs.set_shader_parameter(&"suit_color", def.suit_color)
+		bs.set_shader_parameter(&"tie_color", def.accent_color)
+		return bs
 	if def.suit_style != "classic" and ResourceLoader.exists(mask_path):
 		var bm := src as BaseMaterial3D
 		var sm := ShaderMaterial.new()
@@ -142,6 +165,67 @@ func _suit_material(src: Material) -> Material:
 	mm.rim = 0.2
 	mm.rim_tint = 0.4
 	return mm
+
+
+## Copia la malla con la posición de reposo de cada vértice en UV2 (x, y) y COLOR.r (z): el
+## shader del traje de calle ubica camisa/corbata/zapatos sin que se deslicen con la pose.
+static func _with_rest_attrs(src: ArrayMesh) -> ArrayMesh:
+	var out := ArrayMesh.new()
+	for si in src.get_surface_count():
+		var a := src.surface_get_arrays(si)
+		var v: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var uv2 := PackedVector2Array()
+		var col := PackedColorArray()
+		uv2.resize(v.size())
+		col.resize(v.size())
+		for i in v.size():
+			uv2[i] = Vector2(v[i].x, v[i].y)
+			col[i] = Color(clampf((v[i].z + 0.3) / 0.6, 0.0, 1.0), 0, 0, 1)
+		a[Mesh.ARRAY_TEX_UV2] = uv2
+		a[Mesh.ARRAY_COLOR] = col
+		var fmt := src.surface_get_format(si) & ~Mesh.ARRAY_FLAG_COMPRESS_ATTRIBUTES
+		out.add_surface_from_arrays(src.surface_get_primitive_type(si), a, [], {}, fmt | Mesh.ARRAY_FORMAT_TEX_UV2 | Mesh.ARRAY_FORMAT_COLOR)
+		out.surface_set_material(si, src.surface_get_material(si))
+	return out
+
+
+## Anteojos de marco fino en el hueso de la cabeza (procedurales, sin textura).
+func _attach_glasses() -> void:
+	var ba := _attach("DEF-head")
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.03, 0.03, 0.035)
+	m.roughness = 0.3
+	m.metallic = 0.4
+	var root := Node3D.new()
+	root.position = GLASSES_POS
+	ba.add_child(root)
+	for sx in [-1.0, 1.0]:
+		var t := TorusMesh.new()
+		t.inner_radius = 0.0175
+		t.outer_radius = 0.0205
+		t.rings = 16
+		t.ring_segments = 6
+		var r := MeshInstance3D.new()
+		r.mesh = t
+		r.material_override = m
+		r.rotation_degrees.x = 90.0
+		r.scale = Vector3(1.15, 1.0, 0.85)
+		r.position = Vector3(0.032 * sx, 0, 0)
+		root.add_child(r)
+		var arm := BoxMesh.new()
+		arm.size = Vector3(0.003, 0.004, 0.1)
+		var am := MeshInstance3D.new()
+		am.mesh = arm
+		am.material_override = m
+		am.position = Vector3(0.069 * sx, 0.004, -0.05)
+		root.add_child(am)
+	var br := BoxMesh.new()
+	br.size = Vector3(0.022, 0.003, 0.003)
+	var bm := MeshInstance3D.new()
+	bm.mesh = br
+	bm.material_override = m
+	bm.position = Vector3(0, 0.006, 0)
+	root.add_child(bm)
 
 
 func _attach(bone: String) -> BoneAttachment3D:
