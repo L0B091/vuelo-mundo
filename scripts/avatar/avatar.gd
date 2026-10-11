@@ -314,7 +314,9 @@ func _fly(dt: float, k: float) -> void:
 			speed = move_toward(speed, 40.0, 60.0 * dt)
 			request_land()
 	# subir/bajar claro también en vuelo estacionario (antes 8 m/s: bajar 1 km tardaba 2 min)
-	var climb_max := clampf(maxf(30.0, speed * 0.4), 30.0, 300.0)
+	# (el piloto automático de pruebas conserva el mínimo anterior de 8 m/s para su aproximación)
+	var vmin := 8.0 if absf(pilot_climb) + absf(pilot_stick.y) > 0.001 else 30.0
+	var climb_max := clampf(maxf(vmin, speed * 0.4), vmin, 300.0)
 	if swimming:
 		climb_max = 4.0  # nado: subir/bajar lento
 	var target_climb := clampf(c, -1.0, 1.0) * climb_max
