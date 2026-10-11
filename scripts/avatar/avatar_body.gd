@@ -36,7 +36,13 @@ func setup(p_def: CharacterDef) -> void:
 	pivot.add_child(model)
 	skeleton = model.find_children("*", "Skeleton3D", true, false)[0]
 	var players := model.find_children("*", "AnimationPlayer", true, false)
-	if players.is_empty():
+	if (
+		players.is_empty()
+		or not (
+			(players[0] as AnimationPlayer).has_animation(&"Idle_Loop")
+			or (players[0] as AnimationPlayer).has_animation(&"Idle")
+		)
+	):
 		# cuerpo sin animaciones propias: se le monta la biblioteca del mismo esqueleto
 		anim = AnimationPlayer.new()
 		anim.name = "AnimationPlayer"
@@ -60,6 +66,10 @@ func setup(p_def: CharacterDef) -> void:
 
 
 func _apply_look() -> void:
+	if def.original_look:
+		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		return
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 		for s in mi.mesh.get_surface_count():

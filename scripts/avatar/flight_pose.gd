@@ -128,6 +128,28 @@ const UE_ALIAS := {
 	"DEF-foot.R": "foot_r",
 }
 
+## Nombres Rigify -> SkeletonProfileHumanoid de Godot (modelos importados con retargeting).
+const HUMANOID_ALIAS := {
+	"DEF-hips": "Hips",
+	"DEF-spine.001": "Spine",
+	"DEF-spine.002": "Chest",
+	"DEF-spine.003": "UpperChest",
+	"DEF-neck": "Neck",
+	"DEF-head": "Head",
+	"DEF-upper_arm.L": "LeftUpperArm",
+	"DEF-forearm.L": "LeftLowerArm",
+	"DEF-hand.L": "LeftHand",
+	"DEF-upper_arm.R": "RightUpperArm",
+	"DEF-forearm.R": "RightLowerArm",
+	"DEF-hand.R": "RightHand",
+	"DEF-thigh.L": "LeftUpperLeg",
+	"DEF-shin.L": "LeftLowerLeg",
+	"DEF-foot.L": "LeftFoot",
+	"DEF-thigh.R": "RightUpperLeg",
+	"DEF-shin.R": "RightLowerLeg",
+	"DEF-foot.R": "RightFoot",
+}
+
 ## Peso de cada pose (0..1); el avatar los anima con suavizado.
 var weights: Dictionary = {"hover": 0.0, "cruise": 0.0, "fist": 0.0, "land": 0.0, "launch": 0.0}
 var fist_r: float = 0.0
@@ -141,7 +163,11 @@ static func find_any(sk: Skeleton3D, name: String) -> int:
 	if b >= 0:
 		return b
 	if UE_ALIAS.has(name):
-		return sk.find_bone(UE_ALIAS[name])
+		b = sk.find_bone(UE_ALIAS[name])
+		if b >= 0:
+			return b
+	if HUMANOID_ALIAS.has(name):
+		return sk.find_bone(HUMANOID_ALIAS[name])
 	if name.begins_with("DEF-f_"):
 		# DEF-f_index.01.R -> index_01_r
 		var parts := name.substr(6).split(".")

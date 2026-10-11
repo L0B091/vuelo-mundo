@@ -15,8 +15,8 @@ const PROFILES: Dictionary = {
 	"low":
 	{
 		"fog_end_m": 45000.0,
-		"render_scale": 0.6,
-		"shadows": false,
+		"render_scale": 0.75,
+		"shadows": true,
 		"shadow_size": 1024,
 		"msaa": 0,
 		"detail_mesh_step": 8,
@@ -33,10 +33,10 @@ const PROFILES: Dictionary = {
 	"medium":
 	{
 		"fog_end_m": 90000.0,
-		"render_scale": 0.75,
-		"shadows": false,
+		"render_scale": 0.85,
+		"shadows": true,
 		"shadow_size": 2048,
-		"msaa": 0,
+		"msaa": 1,
 		"detail_mesh_step": 4,
 		"water_tex_div": 2,
 		"coarse_radius": 1,
@@ -51,7 +51,7 @@ const PROFILES: Dictionary = {
 	"high":
 	{
 		"fog_end_m": 160000.0,
-		"render_scale": 0.9,
+		"render_scale": 1.0,
 		"shadows": true,
 		"shadow_size": 2048,
 		"msaa": 1,
@@ -203,11 +203,31 @@ func apply_to(viewport: Viewport, env: Environment, sun: DirectionalLight3D, cam
 	RenderingServer.global_shader_parameter_set(&"water_detail", wd)
 	RenderingServer.global_shader_parameter_set(&"caustics_strength", 0.0 if current_name == "low" else 1.0)
 	viewport.scaling_3d_scale = float(p.render_scale)
+	# FSR 1 al escalar (más nítido que bilineal); FXAA donde no hay MSAA
+	viewport.scaling_3d_mode = (
+		Viewport.SCALING_3D_MODE_FSR if float(p.render_scale) < 0.99 else Viewport.SCALING_3D_MODE_BILINEAR
+	)
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if int(p.msaa) == 0 else Viewport.SCREEN_SPACE_AA_DISABLED
 	viewport.msaa_3d = [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X][int(p.msaa)]
 	RenderingServer.directional_shadow_atlas_set_size(int(p.shadow_size), true)
 	if sun:
 		sun.shadow_enabled = bool(p.shadows)
+	if sun:
+		sun.directional_shadow_max_distance = {"low": 90.0, "medium": 200.0}.get(current_name, 350.0)
+		sun.shadow_blur = 1.5
 	if env:
+		# imagen: ACES, brillo suave (glow sí existe en Mobile), algo de saturación/contraste.
+		# Mobile no tiene SSAO/SSIL/SSR: la oclusión viene de las texturas AO/ORM.
+		env.tonemap_mode = Environment.TONE_MAPPER_ACES
+		env.tonemap_exposure = 1.05
+		env.tonemap_white = 6.0
+		env.glow_enabled = current_name != "low"
+		env.glow_intensity = 0.35
+		env.glow_bloom = 0.03
+		env.glow_hdr_threshold = 1.1
+		env.adjustment_enabled = true
+		env.adjustment_saturation = 1.12
+		env.adjustment_contrast = 1.06
 		env.fog_enabled = true
 		env.fog_mode = Environment.FOG_MODE_DEPTH
 		env.fog_depth_begin = float(p.fog_end_m) * 0.15

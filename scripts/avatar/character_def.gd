@@ -10,6 +10,11 @@ const BASE_SCENE := "res://assets/characters/ual/AnimationLibrary_Godot_Standard
 const HERO_MALE := "res://assets/characters/superhero/Superhero_Male_FullBody.gltf"
 const HERO_FEMALE := "res://assets/characters/superhero/Superhero_Female_FullBody.gltf"
 const HERO_ANIMS := "res://assets/characters/superhero/UAL1_UE.glb"
+## Protagonista masculino por defecto: hombre joven de traje (Meshy text-to-3D + auto-rig),
+## importado con retargeting al SkeletonProfileHumanoid; las animaciones UAL se reimportan
+## con el mismo perfil (UAL1_humanoid.glb) para reproducirse sobre su esqueleto.
+const MESHY_HERO := "res://assets/characters/meshy_hero/hero.glb"
+const HUMANOID_ANIMS := "res://assets/characters/meshy_hero/UAL1_humanoid.glb"
 ## Trajes: "classic" = textura original; "color" = textura teñida con suit_color;
 ## "metal" = teñido metálico satinado; "stealth" = negro mate con acentos.
 const SUITS := ["classic", "color", "metal", "stealth"]
@@ -21,6 +26,8 @@ const SAVE_PATH := "user://character.tres"
 @export var anim_scene: String = HERO_ANIMS
 @export_enum("classic", "color", "metal", "stealth") var suit_style: String = "color"
 @export var height_scale: float = 1.0
+## true: se usa el material/textura original del modelo (sin traje teñido, pelo ni capa generados)
+@export var original_look: bool = false
 @export var suit_color: Color = Color(0.82, 0.83, 0.88)
 @export var accent_color: Color = Color(0.75, 0.08, 0.10)
 @export var skin_color: Color = Color(0.76, 0.56, 0.42)
@@ -33,6 +40,12 @@ const SAVE_PATH := "user://character.tres"
 static func preset(kind: String) -> CharacterDef:
 	var d := CharacterDef.new()
 	d.body = kind
+	if kind == "male":
+		d.base_scene = MESHY_HERO
+		d.anim_scene = HUMANOID_ANIMS
+		d.original_look = true
+		d.hair_style = "none"
+		d.accessories = PackedStringArray()
 	if kind == "female":
 		d.base_scene = HERO_FEMALE
 		d.height_scale = 1.0
@@ -48,6 +61,8 @@ static func load_or_default() -> CharacterDef:
 	if ResourceLoader.exists(SAVE_PATH):
 		var d := ResourceLoader.load(SAVE_PATH) as CharacterDef
 		if d != null:
+			if d.body == "male" and d.base_scene == HERO_MALE:
+				return preset("male")  # guardado de una versión anterior: pasa al protagonista nuevo
 			return d
 	return preset("male")
 
