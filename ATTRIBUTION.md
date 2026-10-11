@@ -130,3 +130,12 @@ barrels, cafe tables and stools, potted plants, roof antennas, market canvas sta
 Files: assets/models/kenney/ (list per pack in assets/ASSETS.json).
 
 Poly Haven models (CC0 1.0, https://polyhaven.com) added for street detail: fire_hydrant, exterior_aircon_unit, planter_box_01, plastic_crate_01, wooden_crate_01, barrel_03, utility_box_01, water_manhole_cover, trashbag, propane_tank, lifebuoy, bananas, old_tyre, rollershutter_window_01, covered_car, concrete_road_barrier, modular_street_seating (authors and URLs in assets/ASSETS.json). Simplified at build time with Godot LOD generation.
+
+## 3dassets.dev models (CC0 1.0)
+Realistic-style CC0 models from https://3dassets.dev (contributor "3dassets"; the site reports
+they were made with AI assistance). Scooters (4 variants), motorbike, 2 bicycles, saloon car, taxi,
+panel van, hatchback, outdoor AC unit, rooftop water tank, satellite dish, balcony, laundry line,
+A-frame pavement sign, container, pedestal crane, fishing boat (used as dhoni), RIB speedboat,
+promenade railing. Per-file source URLs are in assets/ASSETS.json (ids "3da/..."). Files were
+dequantized with gltf-transform (KHR_mesh_quantization is not supported by Godot's importer),
+simplified with Godot LOD generation, vertex-compacted, and their materials baked to vertex colours.

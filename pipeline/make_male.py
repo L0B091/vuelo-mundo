@@ -40,12 +40,16 @@ ROAD_W = {"primary": 11.0, "primary_link": 7.0, "secondary": 9.0, "tertiary": 7.
 SIDEWALK_W = 1.6
 SHOP_ROADS = {"primary", "secondary", "tertiary"}
 # modelos listos (Kenney, CC0): los nombres los resuelve tools/gen_male.gd (KENNEY)
-VEHICLES = ("car", "taxi", "van", "delivery", "suv", "pickup", "covered_car", "taxi")
+VEHICLES = ("car", "taxi", "van", "hatchback", "car", "covered_car", "taxi", "hatchback", "delivery")
+# motos de Malé: casi todas scooters; algunas motos y bicicletas
+TWO_WHEEL = ("scooter_a", "scooter_b", "scooter_c", "scooter_d", "scooter_a", "scooter_c", "motorbike",
+             "bicycle", "bicycle_delivery")
 SHOP_FRONT = ("fruit_stand", "bread_stand", "freezer", "crate", "barrel", "shop_shelf", "gas", "planter")
 EXTRA_KINDS = ("taxi", "van", "delivery", "suv", "pickup", "traffic_light", "sign_stop", "sign_street",
                "elec_pole", "cone", "planter", "fruit_stand", "bread_stand", "freezer", "crate", "barrel",
                "shop_shelf", "cafe_table", "stool", "roof_tank", "antenna", "stall_roof", "fish_crate", "hydrant", "wood_crate", "utility_box", "manhole", "trashbag",
-               "gas", "bananas", "tyre", "covered_car", "barrier")
+               "gas", "bananas", "tyre", "covered_car", "barrier", "hatchback", "laundry", "aframe", "container",
+               "crane") + TWO_WHEEL[:4] + TWO_WHEEL[6:]
 
 
 def market_point(z):
@@ -664,7 +668,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                         pt = Point(px, pz)
                         if rect.contains(pt) and land.contains(pt) and not bld_union.contains(pt):
                             yaw = math.atan2(nx * sd, nz * sd) + (_frac(px, pz) - 0.5) * 0.35
-                            P["scooter"].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
+                            sk = TWO_WHEEL[int(_frac(px, pz, 21) * len(TWO_WHEEL)) % len(TWO_WHEEL)]
+                            P[sk].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
             if hw in SHOP_ROADS or hw in ("residential", "unclassified"):
                 for x, zz, dx, dz in _along(g, 38.0, 17.0):
                     if _frac(x, zz, 2) < 0.55:
@@ -688,7 +693,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                 yaw = math.atan2(nx * sd, nz * sd)
                 kind = ("bin" if f < 0.25 else "sign_street" if f < 0.35 else "elec_pole" if f < 0.47
                         else "planter" if f < 0.58 and hw in SHOP_ROADS else "hydrant" if f < 0.64
-                        else "utility_box" if f < 0.72 else "trashbag" if f < 0.80 else "cone" if f < 0.81 else None)
+                        else "utility_box" if f < 0.72 else "trashbag" if f < 0.80 else "aframe" if f < 0.86 and hw in SHOP_ROADS
+                        else "cone" if f < 0.805 else None)
                 if kind:
                     P[kind].append([px, DECK_Y + 0.02, pz, yaw, 1.0])
                 if kind == "bin":
@@ -806,6 +812,8 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
         y = DECK_Y + b["h"] - 1.0 + 0.05
         if f < 0.55:
             P["roof_tank"].append([c.x, y, c.y, f * 12.0, 1.0])
+        if 0.6 < f < 0.8 and g.area > 70:
+            P["laundry"].append([c.x + 1.5, y, c.y - 1.0, f * 7.0, 1.0])
         if 0.3 < f < 0.75:
             q = g.buffer(-1.5)
             if not q.is_empty:
@@ -824,6 +832,12 @@ def street_props(z, road_info, blds, parks, squares, land, rect, shop_lines):
                 P["crate"].append([px + 1.2, DECK_Y + 0.03, pz + 0.9, _frac(px, pz) * 3.0, 1.0])
                 P["wood_crate"].append([px - 1.1, DECK_Y + 0.03, pz + 1.2, _frac(pz, px) * 3.0, 1.0])
                 P["bananas"].append([px, DECK_Y + 1.05, pz, _frac(px, pz, 3) * 6.0, 1.0])
+        # puerto comercial: contenedores apilados y una grúa
+        for q in range(12):
+            px, pz = mk[0] - 30.0 + (q % 4) * 6.6, mk[1] - 18.0 - (q // 4) * 2.6
+            if land.contains(Point(px, pz)) and not bld_union.contains(Point(px, pz)):
+                P["container"].append([px, DECK_Y + 0.02 + (2.6 if q % 5 == 0 else 0.0), pz, math.pi / 2, 1.0])
+        P["crane"].append([mk[0] - 40.0, DECK_Y + 0.02, mk[1] - 22.0, 0.6, 1.0])
         for q in range(10):
             P["tyre" if q % 2 else "barrier"].append([mk[0] - 6.0 + q * 2.4, DECK_Y + 0.03, mk[1] - 5.0, 0.0, 1.0])
     out = {k: [[round(v, 3) for v in it] for it in lst] for k, lst in P.items()}

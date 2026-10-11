@@ -2,13 +2,97 @@ class_name PropCatalog
 extends RefCounted
 ## Catálogo de modelos listos para el detalle urbano (fuentes y licencias en assets/ASSETS.json).
 
-## Modelos listos de Kenney (CC0): tipo -> [archivo bajo assets/models/kenney, tamaño mayor en m]
+## Modelos realistas de 3dassets.dev (CC0): tipo -> [archivo bajo assets/models/3da, tamaño mayor en m]
+const PROP_RANGE := {
+	"lamp": [420.0, true],
+	"scooter": [120.0, false],
+	"car": [300.0, true],
+	"bench": [150.0, false],
+	"bin": [70.0, false],
+	"chair": [55.0, false],
+	"plant": [60.0, false],
+	"ac": [130.0, false],
+	"balcony": [260.0, true],
+	"tree": [500.0, true],
+	"lounger": [140.0, false],
+	"parasol": [260.0, true],
+	"taxi": [300.0, true],
+	"van": [300.0, true],
+	"delivery": [300.0, true],
+	"suv": [300.0, true],
+	"pickup": [300.0, true],
+	"traffic_light": [260.0, true],
+	"sign_stop": [140.0, false],
+	"sign_street": [150.0, false],
+	"elec_pole": [320.0, true],
+	"cone": [60.0, false],
+	"planter": [90.0, false],
+	"fruit_stand": [90.0, false],
+	"bread_stand": [80.0, false],
+	"freezer": [80.0, false],
+	"shop_shelf": [70.0, false],
+	"crate": [60.0, false],
+	"barrel": [70.0, false],
+	"cafe_table": [80.0, false],
+	"stool": [55.0, false],
+	"roof_tank": [380.0, false],
+	"antenna": [260.0, false],
+	"stall_roof": [160.0, true],
+	"fish_crate": [50.0, false],
+	"hydrant": [70.0, false],
+	"wood_crate": [70.0, false],
+	"utility_box": [90.0, false],
+	"manhole": [60.0, false],
+	"trashbag": [50.0, false],
+	"gas": [50.0, false],
+	"bananas": [45.0, false],
+	"tyre": [60.0, false],
+	"covered_car": [300.0, true],
+	"barrier": [120.0, false],
+	"scooter_a": [120.0, false],
+	"scooter_b": [120.0, false],
+	"scooter_c": [120.0, false],
+	"scooter_d": [120.0, false],
+	"motorbike": [120.0, false],
+	"bicycle": [90.0, false],
+	"bicycle_delivery": [90.0, false],
+	"hatchback": [300.0, true],
+	"laundry": [160.0, false],
+	"aframe": [60.0, false],
+	"container": [600.0, true],
+	"crane": [1500.0, true]
+}
+const DA3 := {
+	"scooter_a": ["scooter_a.glb", 1.82],
+	"scooter_b": ["scooter_b.glb", 1.82],
+	"scooter_c": ["scooter_c.glb", 1.85],
+	"scooter_d": ["scooter_d.glb", 1.85],
+	"motorbike": ["motorbike.glb", 2.05],
+	"bicycle": ["bicycle.glb", 1.75],
+	"bicycle_delivery": ["bicycle_delivery.glb", 1.8],
+	"car": ["saloon.glb", 4.5],
+	"taxi": ["taxi.glb", 4.5],
+	"van": ["van.glb", 5.0],
+	"hatchback": ["hatchback.glb", 4.0],
+	"ac": ["ac_unit.glb", 0.85],
+	"roof_tank": ["roof_tank.glb", 1.7],
+	"antenna": ["dish.glb", 0.9],
+	"balcony_rail": ["balcony.glb", 2.6],
+	"laundry": ["laundry.glb", 3.0],
+	"aframe": ["aframe.glb", 0.95],
+	"container": ["container.glb", 6.0],
+	"crane": ["crane.glb", 14.0],
+	"dhoni": ["boat_fishing_l.glb", 12.0],
+	"speedboat": ["rib.glb", 7.0],
+	"railing": ["railing.glb", 3.0],
+}
+## tope de triángulos de los modelos 3dassets tras simplificar
+const DA3_TRIS := {"bicycle": 900, "car": 1500, "taxi": 1500, "hatchback": 1500, "crane": 2500, "dhoni": 2500}
 const PH_MODEL := {
 	"bin": "metal_trash_can",
 	"bench": "painted_wooden_bench",
 	"chair": "plastic_monobloc_chair_01",
 	"plant": "potted_plant_04",
-	"ac": "exterior_aircon_unit",
 	"hydrant": "fire_hydrant",
 	"planter": "planter_box_01",
 	"crate": "plastic_crate_01",
@@ -83,7 +167,74 @@ static func decimate(m: ArrayMesh, max_tris: int) -> ArrayMesh:
 			var idx := im.get_surface_lod_indices(si, li)
 			if best.size() / 3 > max_tris and idx.size() < best.size():
 				best = idx
-		arr[Mesh.ARRAY_INDEX] = best
+		arr = compact(arr, best)
 		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 		out.surface_set_material(si, im.get_surface_material(si))
 	return out
+
+
+## Deja en los arrays solo los vértices que usan `idx` (los LOD de ImporterMesh comparten el
+## buffer completo; sin esto la malla simplificada pesa lo mismo que la original).
+static func compact(arr: Array, idx: PackedInt32Array) -> Array:
+	var remap := {}
+	var order := PackedInt32Array()
+	var ni := PackedInt32Array()
+	ni.resize(idx.size())
+	for k in idx.size():
+		var o := idx[k]
+		if not remap.has(o):
+			remap[o] = order.size()
+			order.append(o)
+		ni[k] = remap[o]
+	var out := []
+	out.resize(Mesh.ARRAY_MAX)
+	for a in Mesh.ARRAY_MAX:
+		var src = arr[a]
+		if src == null or a == Mesh.ARRAY_INDEX:
+			continue
+		if a == Mesh.ARRAY_TANGENT or a == Mesh.ARRAY_BONES or a == Mesh.ARRAY_WEIGHTS:
+			continue  # tangentes se recalculan si hace falta; las props no tienen huesos
+		var dst = src.duplicate()
+		dst.resize(order.size())
+		for k in order.size():
+			dst[k] = src[order[k]]
+		out[a] = dst
+	out[Mesh.ARRAY_INDEX] = ni
+	return out
+
+
+## Junta todas las superficies sin textura en una sola, con el color de cada material como
+## color de vértice: un modelo de 8 materiales pasa a ser 1 llamada de dibujo por celda.
+static func flatten(m: ArrayMesh) -> ArrayMesh:
+	for si in m.get_surface_count():
+		var mt := m.surface_get_material(si) as BaseMaterial3D
+		if mt != null and mt.albedo_texture != null:
+			return m
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rough := 0.0
+	var metal := 0.0
+	for si in m.get_surface_count():
+		var mt := m.surface_get_material(si) as BaseMaterial3D
+		var c := mt.albedo_color if mt != null else Color(0.7, 0.7, 0.7)
+		rough += (mt.roughness if mt != null else 0.8) / m.get_surface_count()
+		metal += (mt.metallic if mt != null else 0.0) / m.get_surface_count()
+		var arr := m.surface_get_arrays(si)
+		var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		var nn: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		if idx.is_empty():
+			idx = PackedInt32Array(range(v.size()))
+		for k in idx:
+			st.set_color(c)
+			if nn.size() == v.size():
+				st.set_normal(nn[k])
+			st.add_vertex(v[k])
+	st.index()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
+	mat.roughness = clampf(rough, 0.35, 0.95)
+	mat.metallic = clampf(metal, 0.0, 0.6)
+	st.set_material(mat)
+	return st.commit()

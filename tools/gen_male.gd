@@ -15,53 +15,6 @@ const TEX := "res://assets/textures/%s/%s_%s.jpg"
 
 const PROP_CELL := 100.0  # celdas chicas: el rango de visibilidad del MultiMesh se mide al centro de la celda
 ## tipo -> [distancia de dibujo base (m), sombra]
-const PROP_RANGE := {
-	"lamp": [420.0, true],
-	"scooter": [120.0, false],
-	"car": [300.0, true],
-	"bench": [150.0, false],
-	"bin": [70.0, false],
-	"chair": [55.0, false],
-	"plant": [60.0, false],
-	"ac": [130.0, false],
-	"balcony": [260.0, true],
-	"tree": [500.0, true],
-	"lounger": [140.0, false],
-	"parasol": [260.0, true],
-	"taxi": [300.0, true],
-	"van": [300.0, true],
-	"delivery": [300.0, true],
-	"suv": [300.0, true],
-	"pickup": [300.0, true],
-	"traffic_light": [260.0, true],
-	"sign_stop": [140.0, false],
-	"sign_street": [150.0, false],
-	"elec_pole": [320.0, true],
-	"cone": [60.0, false],
-	"planter": [90.0, false],
-	"fruit_stand": [90.0, false],
-	"bread_stand": [80.0, false],
-	"freezer": [80.0, false],
-	"shop_shelf": [70.0, false],
-	"crate": [60.0, false],
-	"barrel": [70.0, false],
-	"cafe_table": [80.0, false],
-	"stool": [55.0, false],
-	"roof_tank": [380.0, false],
-	"antenna": [260.0, false],
-	"stall_roof": [160.0, true],
-	"fish_crate": [50.0, false],
-	"hydrant": [70.0, false],
-	"wood_crate": [70.0, false],
-	"utility_box": [90.0, false],
-	"manhole": [60.0, false],
-	"trashbag": [50.0, false],
-	"gas": [50.0, false],
-	"bananas": [45.0, false],
-	"tyre": [60.0, false],
-	"covered_car": [300.0, true],
-	"barrier": [120.0, false]
-}
 const SCOOTER_COLORS := [
 	Color(0.9, 0.9, 0.92),
 	Color(0.08, 0.08, 0.09),
@@ -356,7 +309,12 @@ func _prop_mesh(kind: String) -> Mesh:
 	if _mats.has(key):
 		return _mats[key]
 	var mesh: Mesh
-	if PropCatalog.KENNEY.has(kind):
+	if PropCatalog.DA3.has(kind):
+		var sc3: Node = (load("res://assets/models/3da/" + str(PropCatalog.DA3[kind][0])) as PackedScene).instantiate()
+		var m3 := PropCatalog.decimate(_merge_meshes(sc3), int(PropCatalog.DA3_TRIS.get(kind, 1000)))
+		mesh = PropCatalog.flatten(PropCatalog.fit_size(m3, float(PropCatalog.DA3[kind][1])))
+		sc3.free()
+	elif PropCatalog.KENNEY.has(kind):
 		var sc: Node = (
 			(load("res://assets/models/kenney/" + str(PropCatalog.KENNEY[kind][0])) as PackedScene).instantiate()
 		)
@@ -395,7 +353,7 @@ func _prop_mesh(kind: String) -> Mesh:
 				mesh = PropMeshes.speedboat()
 			"bird":
 				mesh = PropMeshes.bird()
-	if kind in ["dhoni", "speedboat"]:
+	if kind in ["dhoni", "speedboat"] and not PropCatalog.DA3.has(kind):
 		var bm := ShaderMaterial.new()
 		bm.shader = load("res://shaders/boat_bob.gdshader")
 		(mesh as ArrayMesh).surface_set_material(0, bm)
@@ -453,7 +411,7 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 	root.add_child(holder)
 	var props: Dictionary = meta.props
 	var total := 0
-	for kind: String in PROP_RANGE:
+	for kind: String in PropCatalog.PROP_RANGE:
 		var all_items: Array = props.get(kind, [])
 		# raleo: Malé tiene motos y aires por todos lados, pero el móvil no
 		var every: int = {"scooter": 2}.get(kind, 1)
@@ -499,14 +457,14 @@ func _props(root: Node3D, meta: Dictionary) -> void:
 			mmi.position = org
 			mmi.cast_shadow = (
 				GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-				if PROP_RANGE[kind][1]
+				if PropCatalog.PROP_RANGE[kind][1]
 				else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			)
-			mmi.visibility_range_end = PROP_RANGE[kind][0]
+			mmi.visibility_range_end = PropCatalog.PROP_RANGE[kind][0]
 			mmi.visibility_range_end_margin = 20.0
 			mmi.set_meta(&"detail_kind", kind)
 			mmi.set_meta(&"detail_count", lst.size())
-			mmi.set_meta(&"detail_range", PROP_RANGE[kind][0])
+			mmi.set_meta(&"detail_range", PropCatalog.PROP_RANGE[kind][0])
 			mmi.set_script(DETAIL_LOD)
 			holder.add_child(mmi)
 			total += lst.size()

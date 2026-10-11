@@ -503,5 +503,281 @@
    "pineapple.glb",
    "watermelon.glb"
   ]
+ },
+ {
+  "id": "3da/scooter_a",
+  "kind": "model",
+  "name": "Step-through commuter scooter (Motorcycle Racing and Street Bikes)",
+  "source": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-commuter-scooter-6889697c",
+  "file": "https://cdn.3dassets.dev/assets/15431/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/scooter_b",
+  "kind": "model",
+  "name": "Commuter scooter with top box (Motorcycle Racing and Street Bikes)",
+  "source": "https://3dassets.dev/assets/motorcycle-racing-and-street-bikes-scooter-top-box-ab49caab",
+  "file": "https://cdn.3dassets.dev/assets/15480/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/scooter_c",
+  "kind": "model",
+  "name": "Scooter on its stand (Car Park and Road Vehicle Fleet)",
+  "source": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-scooter-2e680ced",
+  "file": "https://cdn.3dassets.dev/assets/32538/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/scooter_d",
+  "kind": "model",
+  "name": "Scooter (Indian Bazaar Street and Temple)",
+  "source": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-scooter-6ec38292",
+  "file": "https://cdn.3dassets.dev/assets/36563/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/motorbike",
+  "kind": "model",
+  "name": "Parked Motorcycle (Indian Bazaar Street and Temple)",
+  "source": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-parked-motorcycle-d0a13e3f",
+  "file": "https://cdn.3dassets.dev/assets/36564/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/bicycle",
+  "kind": "model",
+  "name": "Step Through Commuter Bicycle (Bicycle Shop and Repair Cafe)",
+  "source": "https://3dassets.dev/assets/bicycle-shop-and-repair-cafe-step-through-commuter-bic-8eeea2cf",
+  "file": "https://cdn.3dassets.dev/assets/32423/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/bicycle_delivery",
+  "kind": "model",
+  "name": "Delivery Bicycle (Canal Town and Windmill)",
+  "source": "https://3dassets.dev/assets/canal-town-and-windmill-delivery-bicycle-13493bc2",
+  "file": "https://cdn.3dassets.dev/assets/36680/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/boat_fishing",
+  "kind": "model",
+  "name": "Fishing Boat Small (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-fishing-boat-small-51cbe6ca",
+  "file": "https://cdn.3dassets.dev/assets/37104/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/boat_fishing_l",
+  "kind": "model",
+  "name": "Fishing Boat Large (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-fishing-boat-large-2a145bf6",
+  "file": "https://cdn.3dassets.dev/assets/37106/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/rib",
+  "kind": "model",
+  "name": "Rigid inflatable boat (Vehicle Collection HD: Cars, Planes and Boats)",
+  "source": "https://3dassets.dev/assets/transport-collection-hd-rigid-inflatable-a8316db9",
+  "file": "https://cdn.3dassets.dev/assets/18720/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/container",
+  "kind": "model",
+  "name": "Yard store container, 6 m (Shipyard and Dry Dock)",
+  "source": "https://3dassets.dev/assets/shipyard-and-dry-dock-shipyard-and-dry-dock-store-cont-8b08858a",
+  "file": "https://cdn.3dassets.dev/assets/37963/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/crane",
+  "kind": "model",
+  "name": "Pedestal crane (Offshore Oil Rig and Platform)",
+  "source": "https://3dassets.dev/assets/offshore-oil-rig-and-platform-pedestal-crane-8b5ccaef",
+  "file": "https://cdn.3dassets.dev/assets/37047/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/dish",
+  "kind": "model",
+  "name": "Satellite Dish (Indian Bazaar Street and Temple)",
+  "source": "https://3dassets.dev/assets/indian-bazaar-street-and-temple-satellite-dish-9d58e137",
+  "file": "https://cdn.3dassets.dev/assets/36575/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/ac_unit",
+  "kind": "model",
+  "name": "Air conditioner outdoor unit (Home Appliances and Utility Room)",
+  "source": "https://3dassets.dev/assets/home-appliances-and-utility-ac-outdoor-unit-a298bd16",
+  "file": "https://cdn.3dassets.dev/assets/14144/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/laundry",
+  "kind": "model",
+  "name": "Laundry Line Frame (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-laundry-line-frame-16810527",
+  "file": "https://cdn.3dassets.dev/assets/37119/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/roof_tank",
+  "kind": "model",
+  "name": "Rooftop Water Tank (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-rooftop-water-tank-0643bd5c",
+  "file": "https://cdn.3dassets.dev/assets/37077/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/balcony",
+  "kind": "model",
+  "name": "House Balcony (Greek Island Village and Harbour)",
+  "source": "https://3dassets.dev/assets/greek-island-village-and-harbour-house-balcony-b3d22994",
+  "file": "https://cdn.3dassets.dev/assets/37070/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/aframe",
+  "kind": "model",
+  "name": "A Frame Pavement Sign (Izakaya Alley and Ramen Shop)",
+  "source": "https://3dassets.dev/assets/izakaya-alley-and-ramen-shop-a-frame-pavement-sign-46762e84",
+  "file": "https://cdn.3dassets.dev/assets/36458/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/railing",
+  "kind": "model",
+  "name": "Promenade railing section (Amusement Arcade and Seaside Pier)",
+  "source": "https://3dassets.dev/assets/amusement-arcade-and-seaside-pier-promenade-railing-se-7c7006a7",
+  "file": "https://cdn.3dassets.dev/assets/35391/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/taxi",
+  "kind": "model",
+  "name": "Licensed taxi saloon (Car Park and Road Vehicle Fleet)",
+  "source": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-taxi-ae3c8ca0",
+  "file": "https://cdn.3dassets.dev/assets/32522/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/van",
+  "kind": "model",
+  "name": "Panel van (Ferry Terminal and Harbour Crossing)",
+  "source": "https://3dassets.dev/assets/ferry-terminal-and-harbour-crossing-ferry-terminal-and-637d23cb",
+  "file": "https://cdn.3dassets.dev/assets/35646/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/hatchback",
+  "kind": "model",
+  "name": "Electric hatchback on charge (Car Park and Road Vehicle Fleet)",
+  "source": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-electric-hatchback-cha-6f5b13c8",
+  "file": "https://cdn.3dassets.dev/assets/32532/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
+ },
+ {
+  "id": "3da/saloon",
+  "kind": "model",
+  "name": "Sports saloon (Car Park and Road Vehicle Fleet)",
+  "source": "https://3dassets.dev/assets/car-park-and-road-vehicle-fleet-sports-saloon-2d5d5fdd",
+  "file": "https://cdn.3dassets.dev/assets/32514/v1/model.glb",
+  "authors": [
+   "3dassets"
+  ],
+  "license": "CC0 1.0",
+  "note": "contributor reports AI-assisted creation (3dassets.dev)"
  }
 ]
